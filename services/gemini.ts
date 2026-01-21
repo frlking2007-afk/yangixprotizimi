@@ -2,13 +2,20 @@
 import { GoogleGenAI } from "@google/genai";
 import { Transaction } from "../types";
 
-// Always initialize the client using process.env.API_KEY directly as a named parameter.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Xavfsiz tashabbuskor (initialization)
+const getAIClient = () => {
+  const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : '';
+  if (!apiKey) return null;
+  return new GoogleGenAI({ apiKey });
+};
 
 export const getFinancialInsights = async (transactions: Transaction[]) => {
+  const ai = getAIClient();
+  if (!ai) return "AI tahlili uchun kalit topilmadi.";
+
   const summary = transactions.reduce((acc, curr) => {
-    if (curr.type === 'kirim') acc.totalIn += curr.amount;
-    else acc.totalOut += curr.amount;
+    if (curr.type === 'kirim') acc.totalIn += (curr.amount || 0);
+    else acc.totalOut += (curr.amount || 0);
     return acc;
   }, { totalIn: 0, totalOut: 0 });
 
@@ -21,20 +28,17 @@ export const getFinancialInsights = async (transactions: Transaction[]) => {
     Tranzaksiyalar soni: ${transactions.length}
     
     Iltimos, menga qisqa va foydali moliyaviy maslahat ber. 
-    Chiqimlar ko'p bo'lsa ogohlantir, kirim yaxshi bo'lsa tabrikla. 
-    Javob o'zbek tilida bo'lsin va maksimal 2-3 jumlada bo'lsin.
+    Javob o'zbek tilida bo'lsin va maksimal 2 jumlada bo'lsin.
   `;
 
   try {
-    // Generate content using the recommended model for basic text tasks.
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
     });
-    // Use the .text property directly (not as a function).
-    return response.text;
+    return response.text || "Tahlil tayyor emas.";
   } catch (error) {
     console.error("AI insight error:", error);
-    return "Xatolik yuz berdi. Keyinroq urinib ko'ring.";
+    return "Xatolik yuz berdi.";
   }
 };
