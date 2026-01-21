@@ -36,6 +36,10 @@ const XPro: React.FC = () => {
   const [formAmount, setFormAmount] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Modal state for Savdo card
+  const [showSavdoModal, setShowSavdoModal] = useState(false);
+  const [savdoAmount, setSavdoAmount] = useState('');
 
   // Refs
   const exportRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -345,6 +349,58 @@ const XPro: React.FC = () => {
   const totalIn = transactions.filter(t => t.type === 'kirim').reduce((acc, curr) => acc + curr.amount, 0);
   const totalOut = transactions.filter(t => t.type === 'chiqim').reduce((acc, curr) => acc + curr.amount, 0);
   const totalBalance = totalIn - totalOut;
+  
+  // Click, Uzcard, Humo umumiy summasi (Savdo kartasida ko'rsatiladi)
+  const clickUzcardHumoTotal = transactions
+    .filter(t => t.type === 'kirim' && ['Click', 'Uzcard', 'Humo'].includes(t.category))
+    .reduce((acc, curr) => acc + curr.amount, 0);
+  
+  // Handle Savdo card click
+  const handleSavdoCardClick = () => {
+    setShowSavdoModal(true);
+    setSavdoAmount('');
+  };
+  
+  // Handle Savdo save (as expense)
+  const handleSavdoSave = async () => {
+    if (!activeShift) {
+      alert('Smena topilmadi');
+      return;
+    }
+
+    const cleanAmount = savdoAmount.replace(/\s/g, '');
+    const numAmount = parseFloat(cleanAmount);
+    
+    if (isNaN(numAmount) || numAmount <= 0) {
+      alert('Iltimos, to\'g\'ri miqdorni kiriting');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const transactionData = {
+        shift_id: activeShift.id,
+        amount: numAmount,
+        description: 'Savdo',
+        category: 'Kassa',
+        type: 'chiqim' as const
+      };
+
+      await saveTransaction(transactionData);
+      
+      // Reset form
+      setSavdoAmount('');
+      setShowSavdoModal(false);
+      
+      // Refresh transactions
+      const trans = await getTransactionsByShift(activeShift.id);
+      setTransactions(trans);
+    } catch (err: any) {
+      alert('Xatolik: ' + (err.message || 'Noma\'lum xatolik'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const filteredTransactions = transactions.filter(t => {
     if (activeTab === 'Xarajat') {
@@ -450,11 +506,14 @@ const XPro: React.FC = () => {
           {/* 3. MAIN GLOBAL STATS - Only for Kassa tab */}
           {activeTab === 'Kassa' && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-white dark:bg-slate-900 hacker:bg-black p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between group">
+              <div 
+                onClick={handleSavdoCardClick}
+                className="bg-white dark:bg-slate-900 hacker:bg-black p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between group cursor-pointer hover:shadow-lg transition-all"
+              >
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Savdo (Jami)</p>
                   <div className="flex items-baseline gap-1">
-                    <h3 className="text-2xl font-black text-slate-900 dark:text-white">{totalIn.toLocaleString()}</h3>
+                    <h3 className="text-2xl font-black text-slate-900 dark:text-white">{clickUzcardHumoTotal.toLocaleString()}</h3>
                     <span className="text-[10px] font-bold text-slate-400 uppercase">so'm</span>
                   </div>
                 </div>
@@ -647,6 +706,56 @@ const XPro: React.FC = () => {
             </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Savdo Modal */}
+      {showSavdoModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowSavdoModal(false)}>
+          <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-6 max-w-md w-full mx-4 border border-slate-200 dark:border-slate-700 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white">Savdo qo'shish</h3>
+              <button onClick={() => setShowSavdoModal(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Summa</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={savdoAmount}
+                    onChange={(e) => {
+                      const formatted = formatAmount(e.target.value);
+                      setSavdoAmount(formatted);
+                    }}
+                    placeholder="0"
+                    className="flex-1 p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl outline-none font-bold text-lg text-slate-900 dark:text-white focus:border-green-500 focus:ring-2 focus:ring-green-200 dark:focus:ring-green-900"
+                    autoFocus
+                  />
+                  <span className="text-slate-600 dark:text-slate-400 font-bold">so'm</span>
+                </div>
+              </div>
+              <button
+                onClick={handleSavdoSave}
+                disabled={isSubmitting || !savdoAmount}
+                className="w-full py-4 bg-green-600 hover:bg-green-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg"
+              >
+                {isSubmitting ? (
+                  <>
+                    <RefreshCcw className="animate-spin" size={20} />
+                    Saqlanmoqda...
+                  </>
+                ) : (
+                  <>
+                    <Check size={20} />
+                    Saqlash
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
