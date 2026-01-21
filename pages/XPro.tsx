@@ -234,16 +234,24 @@ const XPro: React.FC = () => {
     }
   };
 
-  // Stats Calculation
-  const totalSales = transactions
+  // 1. Joriy filtrlangan tranzaksiyalarni aniqlash
+  const filteredTransactions = transactions.filter(t => {
+    if (activeTab === 'Xarajat') {
+      return t.category === 'Xarajat' && (activeSubTab ? t.sub_category === activeSubTab : true);
+    }
+    return t.category === activeTab;
+  });
+
+  // 2. Lokal statistikalarni hisoblash (Faqat joriy ko'rinish uchun)
+  const currentSales = filteredTransactions
     .filter(t => t.type === 'kirim')
     .reduce((acc, curr) => acc + curr.amount, 0);
 
-  const totalExpenses = transactions
+  const currentExpenses = filteredTransactions
     .filter(t => t.type === 'chiqim')
     .reduce((acc, curr) => acc + curr.amount, 0);
 
-  const balance = totalSales - totalExpenses;
+  const currentBalance = currentSales - currentExpenses;
 
   const mainTabs = [
     { name: 'Kassa', icon: Banknote },
@@ -277,17 +285,9 @@ const XPro: React.FC = () => {
     );
   }
 
-  const filteredTransactions = transactions.filter(t => {
-    if (activeTab === 'Xarajat') {
-      return t.category === 'Xarajat' && (activeSubTab ? t.sub_category === activeSubTab : true);
-    }
-    return t.category === activeTab;
-  });
-
-  const subTabTotal = filteredTransactions.reduce((acc, curr) => acc + curr.amount, 0);
-
   // Smena nomidan soatni olib tashlash
   const shiftNameWithoutTime = activeShift.name.split(' ').slice(0, 3).join(' ');
+  const currentCategoryName = activeSubTab || activeTab;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20 no-print">
@@ -384,8 +384,8 @@ const XPro: React.FC = () => {
                   {activeTab} {activeSubTab && <span className="text-indigo-600 dark:text-indigo-400 hacker:text-[#0f0] text-sm hacker:font-mono">({activeSubTab})</span>}
                 </h3>
                 <div className="text-right">
-                  <p className="text-[9px] font-bold text-slate-400 uppercase hacker:font-mono">Tabaka jami</p>
-                  <p className="font-black text-slate-800 dark:text-white hacker:text-[#0f0] text-sm hacker:font-mono">{subTabTotal.toLocaleString()} so'm</p>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase hacker:font-mono">{currentCategoryName} jami</p>
+                  <p className="font-black text-slate-800 dark:text-white hacker:text-[#0f0] text-sm hacker:font-mono">{(currentSales || currentExpenses).toLocaleString()} so'm</p>
                 </div>
               </div>
               <form onSubmit={handleSave} className="space-y-4">
@@ -402,23 +402,38 @@ const XPro: React.FC = () => {
             </div>
           </div>
 
-          {/* 2. Stats Cards Section (Below Form) */}
+          {/* 2. Stats Cards Section (Bo'lim bo'yicha hisoblangan) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-            <button onClick={() => setActiveTab('Kassa')} className="bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-2xl border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-800 transition-all text-left flex items-center justify-between group">
-              <div><p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Savdo (Jami)</p><h3 className="text-xl font-black text-slate-800 dark:text-white hacker:text-[#0f0] hacker:font-mono">{totalSales.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span></h3></div>
-              <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hacker:text-[#0f0] rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform"><ArrowUpRight size={24} /></div>
-            </button>
-            <button onClick={() => { setActiveTab('Xarajat'); if (expenseCategories.length > 0) setActiveSubTab(expenseCategories[0].name); }} className="bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-2xl border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm hover:shadow-md hover:border-red-300 dark:hover:border-red-900 transition-all text-left flex items-center justify-between group">
-              <div><p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Umumiy xarajat</p><h3 className="text-xl font-black text-red-500 dark:text-red-400 hacker:text-[#f00] hacker:font-mono">{totalExpenses.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span></h3></div>
-              <div className="w-12 h-12 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hacker:text-[#f00] rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform"><ArrowDownRight size={24} /></div>
-            </button>
+            <div className="bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-2xl border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm flex items-center justify-between group">
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Savdo ({currentCategoryName})</p>
+                <h3 className="text-xl font-black text-slate-800 dark:text-white hacker:text-[#0f0] hacker:font-mono">
+                  {currentSales.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span>
+                </h3>
+              </div>
+              <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hacker:text-[#0f0] rounded-xl flex items-center justify-center"><ArrowUpRight size={24} /></div>
+            </div>
+            <div className="bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-2xl border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm flex items-center justify-between group">
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Xarajat ({currentCategoryName})</p>
+                <h3 className="text-xl font-black text-red-500 dark:text-red-400 hacker:text-[#f00] hacker:font-mono">
+                  {currentExpenses.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span>
+                </h3>
+              </div>
+              <div className="w-12 h-12 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hacker:text-[#f00] rounded-xl flex items-center justify-center"><ArrowDownRight size={24} /></div>
+            </div>
             <div className="bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-2xl border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm flex items-center justify-between">
-              <div><p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Qolgan pul</p><h3 className={`text-xl font-black hacker:font-mono ${balance >= 0 ? 'text-green-600 dark:text-green-400 hacker:text-[#0f0]' : 'text-orange-500'}`}>{balance.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span></h3></div>
-              <div className={`w-12 h-12 ${balance >= 0 ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' : 'bg-orange-50 text-orange-500'} hacker:text-[#0f0] rounded-xl flex items-center justify-center`}><Calculator size={24} /></div>
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Qoldiq ({currentCategoryName})</p>
+                <h3 className={`text-xl font-black hacker:font-mono ${currentBalance >= 0 ? 'text-green-600 dark:text-green-400 hacker:text-[#0f0]' : 'text-orange-500'}`}>
+                  {currentBalance.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span>
+                </h3>
+              </div>
+              <div className={`w-12 h-12 ${currentBalance >= 0 ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' : 'bg-orange-50 text-orange-500'} hacker:text-[#0f0] rounded-xl flex items-center justify-center`}><Calculator size={24} /></div>
             </div>
           </div>
 
-          {/* 3. Recent Transactions Section (At the bottom of everything) */}
+          {/* 3. Recent Transactions Section */}
           <div className="space-y-3 mt-8">
             <div className="flex items-center justify-between px-1">
               <h3 className="font-bold text-slate-800 dark:text-white hacker:text-[#0f0] text-sm hacker:font-mono">So'nggi operatsiyalar</h3>
