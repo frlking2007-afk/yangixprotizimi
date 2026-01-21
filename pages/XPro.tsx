@@ -127,7 +127,8 @@ const XPro: React.FC = () => {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanAmount = formData.amount.replace(/\s/g, '');
-    if (!cleanAmount || !formData.description || !activeShift) return;
+    // Faqat summa va smena majburiy, izoh ixtiyoriy
+    if (!cleanAmount || !activeShift) return;
 
     try {
       const isExpense = activeTab === 'Xarajat';
@@ -136,7 +137,7 @@ const XPro: React.FC = () => {
       await saveTransaction({
         shift_id: activeShift.id,
         amount: parseFloat(cleanAmount),
-        description: formData.description,
+        description: formData.description || (isExpense ? (activeSubTab || 'Xarajat') : activeTab),
         category: activeTab,
         sub_category: isExpense ? (activeSubTab || 'Boshqa') : undefined,
         type: type
@@ -201,25 +202,25 @@ const XPro: React.FC = () => {
   const subTabTotal = filteredTransactions.reduce((acc, curr) => acc + curr.amount, 0);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-20">
-      {/* Header - Moved to the very top */}
-      <div className="bg-white p-4 md:p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4 -mt-4 mb-2">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center">
-            <Clock size={20} />
+    <div className="space-y-4 animate-in fade-in duration-500 pb-20">
+      {/* Header - Yuqorida, yanada ixcham */}
+      <div className="bg-white p-3 md:p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3 -mt-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-green-50 text-green-600 rounded-xl flex items-center justify-center">
+            <Clock size={18} />
           </div>
           <div>
-            <h3 className="font-bold text-slate-800 text-sm md:text-base">{activeShift.name}</h3>
-            <span className="text-[10px] font-bold text-green-600 uppercase">Faol Smena</span>
+            <h3 className="font-bold text-slate-800 text-sm">{activeShift.name}</h3>
+            <span className="text-[9px] font-bold text-green-600 uppercase">Faol Smena</span>
           </div>
         </div>
-        <button onClick={() => closeShift(activeShift.id).then(() => window.location.reload())} className="px-5 py-2.5 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-all flex items-center gap-2 text-sm">
-          <StopCircle size={18} /> Smenani yopish
+        <button onClick={() => closeShift(activeShift.id).then(() => window.location.reload())} className="px-4 py-2 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-all flex items-center gap-2 text-xs">
+          <StopCircle size={16} /> Smenani yopish
         </button>
       </div>
 
-      {/* Main Tabs */}
-      <div className="flex flex-wrap items-center gap-3">
+      {/* Main Tabs - Ixchamroq */}
+      <div className="flex flex-wrap items-center gap-2">
         {mainTabs.map((tab) => (
           <button
             key={tab.name}
@@ -231,56 +232,56 @@ const XPro: React.FC = () => {
                 setActiveSubTab(null);
               }
             }}
-            className={`flex items-center gap-3 px-6 py-4 rounded-2xl font-black transition-all border ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all border text-sm ${
               activeTab === tab.name 
-              ? 'bg-slate-900 text-white border-slate-900 shadow-xl' 
+              ? 'bg-slate-900 text-white border-slate-900 shadow-md' 
               : 'bg-white text-slate-500 border-slate-100 hover:border-slate-300'
             }`}
           >
-            <tab.icon size={20} />
+            <tab.icon size={16} />
             {tab.name}
           </button>
         ))}
       </div>
 
-      {/* Enlarged Expense Categories (Cards) - Height reduced to h-16 as requested */}
+      {/* Categories Grid - Gaplar va o'lchamlar kichraytirildi */}
       {activeTab === 'Xarajat' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Kategoriyalar</h4>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kategoriyalar</h4>
             <button 
               onClick={() => setShowAddCategory(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-all font-bold text-xs"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-all font-bold text-[10px]"
             >
-              <Plus size={14} /> Kartochka qo'shish
+              <Plus size={12} /> Kartochka qo'shish
             </button>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2">
             {expenseCategories.map(cat => (
               <div 
                 key={cat.id}
-                className={`relative group h-16 rounded-2xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center p-3 ${
+                className={`relative group h-12 rounded-xl border transition-all cursor-pointer flex flex-col items-center justify-center p-2 ${
                   activeSubTab === cat.name 
-                  ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100' 
-                  : 'bg-white border-slate-100 text-slate-600 hover:border-indigo-200'
+                  ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' 
+                  : 'bg-white border-slate-100 text-slate-600 hover:border-indigo-200 shadow-sm'
                 }`}
                 onClick={() => setActiveSubTab(cat.name)}
               >
-                <span className="font-black text-center break-words w-full text-sm md:text-base px-2">{cat.name}</span>
+                <span className="font-bold text-center break-words w-full text-[13px] leading-tight px-1">{cat.name}</span>
                 
-                {/* Edit Button */}
+                {/* Edit Button - Kichikroq */}
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
                     setEditingCategory(cat);
                     setEditCatName(cat.name);
                   }}
-                  className={`absolute top-1.5 right-1.5 p-1 rounded-lg transition-all ${
+                  className={`absolute top-1 right-1 p-0.5 rounded-md transition-all ${
                     activeSubTab === cat.name ? 'bg-indigo-500 text-white' : 'bg-slate-50 text-slate-400 opacity-0 group-hover:opacity-100'
                   }`}
                 >
-                  <Edit2 size={12} />
+                  <Edit2 size={10} />
                 </button>
               </div>
             ))}
@@ -288,139 +289,128 @@ const XPro: React.FC = () => {
         </div>
       )}
 
-      {/* Add Category Modal */}
+      {/* Add/Edit Modal - Standart */}
       {showAddCategory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-[2rem] p-8 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-black text-slate-800">Yangi Kartochka</h3>
-              <button onClick={() => setShowAddCategory(false)} className="p-2 text-slate-400 hover:bg-slate-50 rounded-xl"><X size={20}/></button>
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-black text-slate-800">Yangi Kartochka</h3>
+              <button onClick={() => setShowAddCategory(false)} className="p-1.5 text-slate-400 hover:bg-slate-50 rounded-lg"><X size={18}/></button>
             </div>
-            <form onSubmit={handleAddCategory} className="space-y-4">
+            <form onSubmit={handleAddCategory} className="space-y-3">
               <input 
                 value={newCatName}
                 onChange={(e) => setNewCatName(e.target.value)}
                 placeholder="Nomini kiriting..."
-                className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
                 autoFocus
               />
-              <button type="submit" className="w-full py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg">Saqlash</button>
+              <button type="submit" className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg">Saqlash</button>
             </form>
           </div>
         </div>
       )}
 
-      {/* Edit Category Modal */}
       {editingCategory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-[2rem] p-8 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-black text-slate-800">Tahrirlash</h3>
-              <button onClick={() => setEditingCategory(null)} className="p-2 text-slate-400 hover:bg-slate-50 rounded-xl"><X size={20}/></button>
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-black text-slate-800">Tahrirlash</h3>
+              <button onClick={() => setEditingCategory(null)} className="p-1.5 text-slate-400 hover:bg-slate-50 rounded-lg"><X size={18}/></button>
             </div>
-            <form onSubmit={handleUpdateCategory} className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Kartochka nomi</label>
-                <input 
-                  value={editCatName}
-                  onChange={(e) => setEditCatName(e.target.value)}
-                  className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
-                  autoFocus
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button 
-                  type="button" 
-                  onClick={() => handleDeleteCategory(editingCategory.id)}
-                  className="flex-1 py-4 bg-red-50 text-red-600 font-bold rounded-2xl hover:bg-red-100 flex items-center justify-center gap-2"
-                >
-                  <Trash2 size={18} /> O'chirish
+            <form onSubmit={handleUpdateCategory} className="space-y-3">
+              <input 
+                value={editCatName}
+                onChange={(e) => setEditCatName(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <button type="button" onClick={() => handleDeleteCategory(editingCategory.id)} className="flex-1 py-3 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 flex items-center justify-center gap-1.5 text-sm">
+                  <Trash2 size={16} /> O'chirish
                 </button>
-                <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg">Saqlash</button>
+                <button type="submit" className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg text-sm">Saqlash</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Form */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Form - Izoh ixtiyoriy qilindi */}
         <div className="lg:col-span-5">
-          <div className="bg-white rounded-[2rem] p-6 md:p-8 border border-slate-100 shadow-sm sticky top-8">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="font-black text-xl text-slate-800 flex items-center gap-3 capitalize">
-                {activeTab} {activeSubTab && <span className="text-indigo-600">({activeSubTab})</span>}
+          <div className="bg-white rounded-3xl p-5 md:p-6 border border-slate-100 shadow-sm sticky top-4">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-black text-lg text-slate-800 flex items-center gap-2 capitalize">
+                {activeTab} {activeSubTab && <span className="text-indigo-600 text-sm">({activeSubTab})</span>}
               </h3>
               <div className="text-right">
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Jami sarf</p>
-                <p className="font-black text-slate-800">{subTabTotal.toLocaleString()} so'm</p>
+                <p className="text-[9px] font-bold text-slate-400 uppercase">Jami</p>
+                <p className="font-black text-slate-800 text-sm">{subTabTotal.toLocaleString()} so'm</p>
               </div>
             </div>
 
-            <form onSubmit={handleSave} className="space-y-6">
+            <form onSubmit={handleSave} className="space-y-4">
               <div className="relative">
                 <input 
-                  type="text" 
-                  required
-                  inputMode="numeric"
+                  type="text" required inputMode="numeric"
                   value={formData.amount}
                   onChange={handleAmountChange}
                   placeholder="0"
-                  className="w-full pl-6 pr-16 py-6 bg-slate-50 border border-slate-100 rounded-3xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none font-black text-3xl transition-all"
+                  className="w-full pl-5 pr-14 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none font-black text-2xl transition-all"
                 />
-                <span className="absolute right-6 top-1/2 -translate-y-1/2 font-bold text-slate-300">so'm</span>
+                <span className="absolute right-5 top-1/2 -translate-y-1/2 font-bold text-slate-300 text-sm">so'm</span>
               </div>
               <textarea 
-                required
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
-                rows={3}
-                placeholder="Izoh yozing..."
-                className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-3xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all resize-none font-medium"
+                rows={2}
+                placeholder="Izoh yozing (ixtiyoriy)..."
+                className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all resize-none font-medium text-sm"
               />
-              <button type="submit" className="w-full py-5 bg-indigo-600 text-white font-black rounded-[1.5rem] hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 flex items-center justify-center gap-3">
-                <Save size={24} /> Saqlash
+              <button type="submit" className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition-all shadow-lg flex items-center justify-center gap-2 text-sm">
+                <Save size={20} /> Saqlash
               </button>
             </form>
           </div>
         </div>
 
-        {/* History */}
-        <div className="lg:col-span-7 space-y-4">
-          <div className="flex items-center justify-between px-2">
-            <h3 className="font-bold text-slate-800">So'nggi operatsiyalar</h3>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{filteredTransactions.length} ta</span>
+        {/* History - Ro'yxat masofalari kamaytirildi */}
+        <div className="lg:col-span-7 space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="font-bold text-slate-800 text-sm">So'nggi operatsiyalar</h3>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{filteredTransactions.length} ta</span>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {filteredTransactions.length > 0 ? (
               filteredTransactions.map((t) => (
-                <div key={t.id} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex items-center justify-between group hover:border-indigo-100 transition-all animate-in slide-in-from-right-2">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${t.type === 'kirim' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
-                      {t.type === 'kirim' ? <Plus size={24} /> : <TrendingDown size={24} />}
+                <div key={t.id} className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between group hover:border-indigo-100 transition-all animate-in slide-in-from-right-1">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${t.type === 'kirim' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                      {t.type === 'kirim' ? <Plus size={18} /> : <TrendingDown size={18} />}
                     </div>
                     <div>
-                      <p className="font-bold text-slate-800">{t.description}</p>
+                      <p className="font-bold text-slate-800 text-[13px] leading-tight">{t.description}</p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[10px] font-bold text-slate-400">{new Date(t.date).toLocaleTimeString('uz-UZ')}</span>
-                        {t.sub_category && <span className="px-2 py-0.5 bg-slate-100 text-indigo-500 rounded-md text-[9px] font-black uppercase">{t.sub_category}</span>}
+                        <span className="text-[9px] font-bold text-slate-400">{new Date(t.date).toLocaleTimeString('uz-UZ', {hour: '2-digit', minute:'2-digit'})}</span>
+                        {t.sub_category && <span className="px-1.5 py-0.5 bg-slate-100 text-indigo-500 rounded text-[8px] font-black uppercase">{t.sub_category}</span>}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-6">
-                    <p className={`font-black text-lg ${t.type === 'kirim' ? 'text-green-600' : 'text-red-500'}`}>
+                  <div className="flex items-center gap-4">
+                    <p className={`font-black text-sm ${t.type === 'kirim' ? 'text-green-600' : 'text-red-500'}`}>
                       {t.type === 'kirim' ? '+' : '-'}{t.amount.toLocaleString()}
                     </p>
-                    <button onClick={() => handleDelete(t.id)} className="p-2 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100">
-                      <Trash2 size={18} />
+                    <button onClick={() => handleDelete(t.id)} className="p-1.5 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100">
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="bg-white rounded-[2.5rem] p-20 text-center border border-dashed border-slate-200">
-                <p className="text-slate-300 font-bold italic">Hozircha ma'lumot yo'q</p>
+              <div className="bg-white rounded-3xl p-12 text-center border border-dashed border-slate-200">
+                <p className="text-slate-300 font-bold italic text-sm">Ma'lumot yo'q</p>
               </div>
             )}
           </div>
