@@ -27,13 +27,15 @@ const XPro: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('Kassa');
   const [activeSubTab, setActiveSubTab] = useState<string | null>(null);
   const [formData, setFormData] = useState({ amount: '', description: '' });
+  const [entryType, setEntryType] = useState<TransactionType>('kirim');
   
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState({ amount: '', description: '' });
 
-  // Refs for export
+  // Refs
   const exportRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const amountInputRef = useRef<HTMLInputElement>(null);
 
   const initData = async () => {
     setLoading(true);
@@ -53,6 +55,7 @@ const XPro: React.FC = () => {
 
       if (activeTab === 'Xarajat' && !activeSubTab && categories.length > 0) {
         setActiveSubTab(categories[0].name);
+        setEntryType('chiqim');
       }
     } catch (err) {
       console.error("Data fetch error:", err);
@@ -64,6 +67,15 @@ const XPro: React.FC = () => {
   useEffect(() => {
     initData();
   }, []);
+
+  // Sync entryType with activeTab
+  useEffect(() => {
+    if (activeTab === 'Xarajat') {
+      setEntryType('chiqim');
+    } else {
+      setEntryType('kirim');
+    }
+  }, [activeTab]);
 
   const formatAmount = (val: string) => {
     const digits = val.replace(/\D/g, '');
@@ -99,16 +111,13 @@ const XPro: React.FC = () => {
 
     setIsSaving(true);
     try {
-      const isExpense = activeTab === 'Xarajat';
-      const type: TransactionType = isExpense ? 'chiqim' : 'kirim';
-      
       const payload = {
         shift_id: activeShift.id,
         amount: numAmount,
-        description: formData.description.trim() || (isExpense ? (activeSubTab || 'Xarajat') : activeTab),
+        description: formData.description.trim() || (activeTab === 'Xarajat' ? (activeSubTab || 'Xarajat') : activeTab),
         category: activeTab,
-        sub_category: isExpense ? (activeSubTab || 'Boshqa') : null,
-        type: type
+        sub_category: activeTab === 'Xarajat' ? (activeSubTab || 'Boshqa') : null,
+        type: entryType
       };
 
       const result = await saveTransaction(payload);
@@ -117,12 +126,23 @@ const XPro: React.FC = () => {
         setFormData({ amount: '', description: '' });
         const trans = await getTransactionsByShift(activeShift.id);
         setTransactions(trans);
+        // Reset to default type for the tab after saving
+        if (activeTab === 'Xarajat') setEntryType('chiqim');
+        else setEntryType('kirim');
       }
     } catch (err: any) {
       alert("Saqlashda xato: " + (err.message || "Xatolik"));
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const setManualEntry = (type: TransactionType) => {
+    setEntryType(type);
+    setTimeout(() => {
+      amountInputRef.current?.focus();
+      amountInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
   };
 
   const startEdit = (t: Transaction) => {
@@ -178,7 +198,6 @@ const XPro: React.FC = () => {
     }
   };
 
-  // Export Functions
   const handlePrint = (catId: string) => {
     const el = exportRefs.current[catId];
     if (!el) return;
@@ -234,7 +253,7 @@ const XPro: React.FC = () => {
     }
   };
 
-  // 1. Joriy filtrlangan tranzaksiyalarni aniqlash
+  // Transaction Lists
   const filteredTransactions = transactions.filter(t => {
     if (activeTab === 'Xarajat') {
       return t.category === 'Xarajat' && (activeSubTab ? t.sub_category === activeSubTab : true);
@@ -242,16 +261,35 @@ const XPro: React.FC = () => {
     return t.category === activeTab;
   });
 
-  // 2. Lokal statistikalarni hisoblash (Faqat joriy ko'rinish uchun)
-  const currentSales = filteredTransactions
+  // Global Shift Stats
+  const globalSales = transactions
     .filter(t => t.type === 'kirim')
     .reduce((acc, curr) => acc + curr.amount, 0);
 
-  const currentExpenses = filteredTransactions
+  const globalExpenses = transactions
     .filter(t => t.type === 'chiqim')
     .reduce((acc, curr) => acc + curr.amount, 0);
 
-  const currentBalance = currentSales - currentExpenses;
+  const globalBalance = globalSales - globalExpenses;
+
+  // Local Stats
+  const localSales = filteredTransactions
+    .filter(t => t.type === 'kirim')
+    .reduce((acc, curr) => acc + curr.amount, 0);
+
+  const localExpenses = filteredTransactions
+    .filter(t => t.type === 'chiqim')
+    .reduce((acc, curr) => acc + curr.amount, 0);
+
+  const localBalance = localSales - localExpenses;
+
+  const isExpenseTab = activeTab === 'Xarajat';
+  const displaySales = isExpenseTab ? localSales : globalSales;
+  const displayExpenses = isExpenseTab ? localExpenses : globalExpenses;
+  const displayBalance = isExpenseTab ? localBalance : globalBalance;
+  
+  const currentLabelSuffix = isExpenseTab ? ` (${activeSubTab || 'Xarajat'})` : ' (Jami)';
+  const currentExpenseSuffix = isExpenseTab ? ` (${activeSubTab || 'Xarajat'})` : ' (Smena)';
 
   const mainTabs = [
     { name: 'Kassa', icon: Banknote },
@@ -285,7 +323,6 @@ const XPro: React.FC = () => {
     );
   }
 
-  // Smena nomidan soatni olib tashlash
   const shiftNameWithoutTime = activeShift.name.split(' ').slice(0, 3).join(' ');
   const currentCategoryName = activeSubTab || activeTab;
 
@@ -368,7 +405,7 @@ const XPro: React.FC = () => {
               <div className="flex items-center justify-between px-1 text-[10px] font-bold text-slate-400 hacker:text-[#0f0] uppercase tracking-widest hacker:font-mono">Kategoriyalar</div>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2">
                 {expenseCategories.map(cat => (
-                  <div key={cat.id} className={`relative group h-12 rounded-xl border transition-all cursor-pointer flex items-center justify-center p-2 ${activeSubTab === cat.name ? 'bg-indigo-600 hacker:bg-[#002200] border-indigo-600 hacker:border-[#0f0] text-white hacker:text-[#0f0]' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 hacker:text-[#0f0]/60'} hacker:rounded-none hacker:font-mono`} onClick={() => setActiveSubTab(cat.name)}>
+                  <div key={cat.id} className={`relative group h-12 rounded-xl border transition-all cursor-pointer flex items-center justify-center p-2 ${activeSubTab === cat.name ? 'bg-indigo-600 hacker:bg-[#002200] border-indigo-600 hacker:border-[#0f0] text-white hacker:text-[#0f0]' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 hacker:text-[#0f0]/60'} hacker:rounded-none hacker:font-mono`} onClick={() => { setActiveSubTab(cat.name); setEntryType('chiqim'); }}>
                     <span className="font-bold text-center break-words w-full text-[13px] leading-tight">{cat.name}</span>
                   </div>
                 ))}
@@ -377,59 +414,90 @@ const XPro: React.FC = () => {
           )}
 
           {/* 1. Form Section */}
-          <div className="max-w-2xl mx-auto w-full">
-            <div className="bg-white dark:bg-slate-900 hacker:bg-black rounded-3xl p-5 md:p-6 border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm hacker:rounded-none">
+          <div className="max-w-2xl mx-auto w-full scroll-mt-24">
+            <div className={`bg-white dark:bg-slate-900 hacker:bg-black rounded-3xl p-5 md:p-6 border transition-all duration-300 shadow-sm hacker:rounded-none ${entryType === 'kirim' ? 'border-green-400 dark:border-green-600 ring-2 ring-green-50' : 'border-slate-100 dark:border-slate-800'}`}>
               <div className="flex items-center justify-between mb-5">
-                <h3 className="font-black text-lg text-slate-800 dark:text-white hacker:text-[#0f0] flex items-center gap-2 capitalize hacker:font-mono">
-                  {activeTab} {activeSubTab && <span className="text-indigo-600 dark:text-indigo-400 hacker:text-[#0f0] text-sm hacker:font-mono">({activeSubTab})</span>}
-                </h3>
+                <div className="flex items-center gap-3">
+                  <h3 className={`font-black text-lg flex items-center gap-2 capitalize hacker:font-mono ${entryType === 'kirim' ? 'text-green-600' : 'text-slate-800 dark:text-white'}`}>
+                    {entryType === 'kirim' ? 'Savdo' : 'Xarajat'} 
+                    {activeSubTab && <span className="text-slate-400 dark:text-slate-600 text-sm hacker:font-mono">({activeSubTab})</span>}
+                  </h3>
+                  {entryType === 'kirim' && <span className="px-2 py-0.5 bg-green-50 dark:bg-green-900/20 text-green-600 rounded text-[10px] font-black uppercase animate-pulse">Savdo rejimi</span>}
+                </div>
                 <div className="text-right">
                   <p className="text-[9px] font-bold text-slate-400 uppercase hacker:font-mono">{currentCategoryName} jami</p>
-                  <p className="font-black text-slate-800 dark:text-white hacker:text-[#0f0] text-sm hacker:font-mono">{(currentSales || currentExpenses).toLocaleString()} so'm</p>
+                  <p className="font-black text-slate-800 dark:text-white hacker:text-[#0f0] text-sm hacker:font-mono">{(entryType === 'kirim' ? localSales : localExpenses).toLocaleString()} so'm</p>
                 </div>
               </div>
               <form onSubmit={handleSave} className="space-y-4">
                 <div className="relative">
-                  <input type="text" required inputMode="numeric" value={formData.amount} onChange={handleAmountChange} placeholder="0" disabled={isSaving} className="w-full pl-5 pr-14 py-4 bg-slate-50 dark:bg-slate-950 hacker:bg-black border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] rounded-2xl hacker:rounded-none outline-none font-black text-2xl dark:text-white hacker:text-[#0f0] hacker:font-mono" />
+                  <input 
+                    ref={amountInputRef}
+                    type="text" 
+                    required 
+                    inputMode="numeric" 
+                    value={formData.amount} 
+                    onChange={handleAmountChange} 
+                    placeholder="0" 
+                    disabled={isSaving} 
+                    className={`w-full pl-5 pr-14 py-4 bg-slate-50 dark:bg-slate-950 hacker:bg-black border rounded-2xl hacker:rounded-none outline-none font-black text-2xl dark:text-white hacker:text-[#0f0] hacker:font-mono transition-all ${entryType === 'kirim' ? 'border-green-200 focus:border-green-500' : 'border-slate-100 dark:border-slate-800 focus:border-indigo-500'}`} 
+                  />
                   <span className="absolute right-5 top-1/2 -translate-y-1/2 font-bold text-slate-300 dark:text-slate-600 hacker:text-[#0f0]/40 text-sm hacker:font-mono">so'm</span>
                 </div>
-                <textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} rows={2} disabled={isSaving} placeholder="Izoh yozing (ixtiyoriy)..." className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950 hacker:bg-black border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] rounded-2xl hacker:rounded-none outline-none transition-all resize-none font-medium text-sm dark:text-white hacker:text-[#0f0] hacker:font-mono" />
-                <button type="submit" disabled={isSaving} className="w-full py-4 bg-indigo-600 hacker:bg-[#0f0] text-white hacker:text-black font-black rounded-2xl hacker:rounded-none hover:bg-indigo-700 transition-all shadow-lg flex items-center justify-center gap-2 text-sm hacker:font-mono disabled:opacity-70">
+                <textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} rows={2} disabled={isSaving} placeholder="Izoh yozing (ixtiyoriy)..." className={`w-full px-5 py-4 bg-slate-50 dark:bg-slate-950 hacker:bg-black border rounded-2xl hacker:rounded-none outline-none transition-all resize-none font-medium text-sm dark:text-white hacker:text-[#0f0] hacker:font-mono ${entryType === 'kirim' ? 'border-green-200 focus:border-green-500' : 'border-slate-100 dark:border-slate-800 focus:border-indigo-500'}`} />
+                <button type="submit" disabled={isSaving} className={`w-full py-4 text-white hacker:text-black font-black rounded-2xl hacker:rounded-none transition-all shadow-lg flex items-center justify-center gap-2 text-sm hacker:font-mono disabled:opacity-70 ${entryType === 'kirim' ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
                   {isSaving ? <RefreshCcw className="animate-spin" size={20} /> : <Save size={20} />}
-                  {isSaving ? "Saqlanmoqda..." : "Saqlash"}
+                  {isSaving ? "Saqlanmoqda..." : entryType === 'kirim' ? "Savdoni saqlash" : "Xarajatni saqlash"}
                 </button>
               </form>
             </div>
           </div>
 
-          {/* 2. Stats Cards Section (Bo'lim bo'yicha hisoblangan) */}
+          {/* 2. Stats Cards Section */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-            <div className="bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-2xl border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm flex items-center justify-between group">
+            {/* Savdo Card */}
+            <div className={`bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-2xl border transition-all shadow-sm flex items-center justify-between group cursor-default ${entryType === 'kirim' ? 'border-green-400 ring-4 ring-green-50' : 'border-slate-100 dark:border-slate-800'}`}>
               <div>
-                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Savdo ({currentCategoryName})</p>
+                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Savdo{currentLabelSuffix}</p>
                 <h3 className="text-xl font-black text-slate-800 dark:text-white hacker:text-[#0f0] hacker:font-mono">
-                  {currentSales.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span>
+                  {displaySales.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span>
                 </h3>
               </div>
-              <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hacker:text-[#0f0] rounded-xl flex items-center justify-center"><ArrowUpRight size={24} /></div>
+              <button 
+                onClick={() => setManualEntry('kirim')}
+                className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all active:scale-90 ${entryType === 'kirim' ? 'bg-green-600 text-white' : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-green-100'}`}
+                title="Savdo kiritish"
+              >
+                <ArrowUpRight size={24} />
+              </button>
             </div>
-            <div className="bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-2xl border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm flex items-center justify-between group">
+
+            {/* Xarajat Card */}
+            <div className={`bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-2xl border transition-all shadow-sm flex items-center justify-between group cursor-default ${entryType === 'chiqim' ? 'border-red-400 ring-4 ring-red-50' : 'border-slate-100 dark:border-slate-800'}`}>
               <div>
-                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Xarajat ({currentCategoryName})</p>
+                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Xarajat{currentExpenseSuffix}</p>
                 <h3 className="text-xl font-black text-red-500 dark:text-red-400 hacker:text-[#f00] hacker:font-mono">
-                  {currentExpenses.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span>
+                  {displayExpenses.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span>
                 </h3>
               </div>
-              <div className="w-12 h-12 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hacker:text-[#f00] rounded-xl flex items-center justify-center"><ArrowDownRight size={24} /></div>
+              <button 
+                onClick={() => setManualEntry('chiqim')}
+                className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all active:scale-90 ${entryType === 'chiqim' ? 'bg-red-600 text-white' : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100'}`}
+                title="Xarajat kiritish"
+              >
+                <ArrowDownRight size={24} />
+              </button>
             </div>
-            <div className="bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-2xl border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm flex items-center justify-between">
+
+            {/* Qoldiq Card */}
+            <div className="bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-2xl border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm flex items-center justify-between transition-all">
               <div>
-                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Qoldiq ({currentCategoryName})</p>
-                <h3 className={`text-xl font-black hacker:font-mono ${currentBalance >= 0 ? 'text-green-600 dark:text-green-400 hacker:text-[#0f0]' : 'text-orange-500'}`}>
-                  {currentBalance.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span>
+                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Qoldiq{currentLabelSuffix}</p>
+                <h3 className={`text-xl font-black hacker:font-mono ${displayBalance >= 0 ? 'text-green-600 dark:text-green-400 hacker:text-[#0f0]' : 'text-orange-500'}`}>
+                  {displayBalance.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span>
                 </h3>
               </div>
-              <div className={`w-12 h-12 ${currentBalance >= 0 ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' : 'bg-orange-50 text-orange-500'} hacker:text-[#0f0] rounded-xl flex items-center justify-center`}><Calculator size={24} /></div>
+              <div className={`w-12 h-12 ${displayBalance >= 0 ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' : 'bg-orange-50 text-orange-500'} hacker:text-[#0f0] rounded-xl flex items-center justify-center`}><Calculator size={24} /></div>
             </div>
           </div>
 
