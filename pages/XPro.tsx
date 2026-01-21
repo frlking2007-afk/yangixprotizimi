@@ -202,19 +202,19 @@ const XPro: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20">
-      {/* Header */}
-      <div className="bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+      {/* Header - Moved to the very top */}
+      <div className="bg-white p-4 md:p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4 -mt-4 mb-2">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center">
-            <Clock size={24} />
+          <div className="w-10 h-10 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center">
+            <Clock size={20} />
           </div>
           <div>
-            <h3 className="font-bold text-slate-800">{activeShift.name}</h3>
-            <span className="text-xs font-bold text-green-600 uppercase">Faol Smena</span>
+            <h3 className="font-bold text-slate-800 text-sm md:text-base">{activeShift.name}</h3>
+            <span className="text-[10px] font-bold text-green-600 uppercase">Faol Smena</span>
           </div>
         </div>
-        <button onClick={() => closeShift(activeShift.id).then(() => window.location.reload())} className="px-6 py-3 bg-red-50 text-red-600 font-bold rounded-2xl hover:bg-red-100 transition-all flex items-center gap-2">
-          <StopCircle size={20} /> Smenani yopish
+        <button onClick={() => closeShift(activeShift.id).then(() => window.location.reload())} className="px-5 py-2.5 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-all flex items-center gap-2 text-sm">
+          <StopCircle size={18} /> Smenani yopish
         </button>
       </div>
 
@@ -243,7 +243,7 @@ const XPro: React.FC = () => {
         ))}
       </div>
 
-      {/* Enlarged Expense Categories (Cards) */}
+      {/* Enlarged Expense Categories (Cards) - Height reduced to h-16 as requested */}
       {activeTab === 'Xarajat' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -260,14 +260,14 @@ const XPro: React.FC = () => {
             {expenseCategories.map(cat => (
               <div 
                 key={cat.id}
-                className={`relative group h-24 rounded-3xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center p-4 ${
+                className={`relative group h-16 rounded-2xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center p-3 ${
                   activeSubTab === cat.name 
                   ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100' 
                   : 'bg-white border-slate-100 text-slate-600 hover:border-indigo-200'
                 }`}
                 onClick={() => setActiveSubTab(cat.name)}
               >
-                <span className="font-black text-center break-words w-full">{cat.name}</span>
+                <span className="font-black text-center break-words w-full text-sm md:text-base px-2">{cat.name}</span>
                 
                 {/* Edit Button */}
                 <button 
@@ -276,11 +276,11 @@ const XPro: React.FC = () => {
                     setEditingCategory(cat);
                     setEditCatName(cat.name);
                   }}
-                  className={`absolute top-2 right-2 p-1.5 rounded-lg transition-all ${
+                  className={`absolute top-1.5 right-1.5 p-1 rounded-lg transition-all ${
                     activeSubTab === cat.name ? 'bg-indigo-500 text-white' : 'bg-slate-50 text-slate-400 opacity-0 group-hover:opacity-100'
                   }`}
                 >
-                  <Edit2 size={14} />
+                  <Edit2 size={12} />
                 </button>
               </div>
             ))}
