@@ -37,7 +37,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
             <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
               <Wallet size={24} />
             </div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-800">XisoBot</h1>
+            <h1 className="text-xl font-bold tracking-tight text-slate-800">Xpro</h1>
           </div>
 
           <nav className="flex-1 px-4 py-4 space-y-1">

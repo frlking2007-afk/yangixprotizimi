@@ -42,6 +42,11 @@ const XPro: React.FC = () => {
         const trans = await getTransactionsByShift(shift.id);
         setTransactions(trans);
       }
+
+      // Agar Xarajat bo'limida bo'lsak va kategoriya tanlanmagan bo'lsa, birinchisini tanlaymiz
+      if (activeTab === 'Xarajat' && !activeSubTab && categories.length > 0) {
+        setActiveSubTab(categories[0].name);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -180,7 +185,12 @@ const XPro: React.FC = () => {
             key={tab.name}
             onClick={() => {
               setActiveTab(tab.name);
-              setActiveSubTab(null);
+              // Agar Xarajat tanlansa va kategoriyalar bo'lsa, birinchisini tanlash
+              if (tab.name === 'Xarajat' && expenseCategories.length > 0) {
+                setActiveSubTab(expenseCategories[0].name);
+              } else {
+                setActiveSubTab(null);
+              }
             }}
             className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold transition-all border ${
               activeTab === tab.name 
@@ -206,14 +216,8 @@ const XPro: React.FC = () => {
       </div>
 
       {/* Expense Sub-categories (only if Xarajat is active) */}
-      {activeTab === 'Xarajat' && (
+      {activeTab === 'Xarajat' && expenseCategories.length > 0 && (
         <div className="flex flex-wrap gap-2 p-1.5 bg-slate-100/50 rounded-2xl animate-in slide-in-from-top-2">
-          <button
-            onClick={() => setActiveSubTab(null)}
-            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${!activeSubTab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            Barchasi
-          </button>
           {expenseCategories.map(cat => (
             <button
               key={cat.id}
