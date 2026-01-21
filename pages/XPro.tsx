@@ -594,12 +594,13 @@ const XPro: React.FC = () => {
             </div>
           )}
 
-          {/* 4. Recent Transactions List */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between px-2">
-              <h3 className="font-bold text-slate-800 dark:text-white text-sm uppercase tracking-widest">So'nggi operatsiyalar</h3>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{filteredTransactions.length} ta amal</span>
-            </div>
+          {/* 4. Recent Transactions List - Hidden in Kassa tab */}
+          {activeTab !== 'Kassa' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-2">
+                <h3 className="font-bold text-slate-800 dark:text-white text-sm uppercase tracking-widest">So'nggi operatsiyalar</h3>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{filteredTransactions.length} ta amal</span>
+              </div>
             <div className="space-y-2.5">
               {filteredTransactions.length > 0 ? (
                 filteredTransactions.map((t) => (
@@ -644,7 +645,8 @@ const XPro: React.FC = () => {
                 </div>
               )}
             </div>
-          </div>
+            </div>
+          )}
         </div>
       )}
     </div>
