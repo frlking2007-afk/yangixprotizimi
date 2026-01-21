@@ -13,7 +13,8 @@ import {
   getActiveShift, startNewShift, closeShift, 
   getTransactionsByShift, deleteTransaction,
   getExpenseCategories, updateTransaction, getDeletionPassword,
-  createExpenseCategory, updateExpenseCategory, deleteExpenseCategory
+  createExpenseCategory, updateExpenseCategory, deleteExpenseCategory,
+  saveTransaction
 } from '../services/supabase';
 
 const XPro: React.FC = () => {
@@ -30,6 +31,11 @@ const XPro: React.FC = () => {
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState({ amount: '', description: '' });
+
+  // Form states
+  const [formAmount, setFormAmount] = useState('');
+  const [formDescription, setFormDescription] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Refs
   const exportRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -67,6 +73,52 @@ const XPro: React.FC = () => {
   const formatAmount = (val: string) => {
     const digits = val.replace(/\D/g, '');
     return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  };
+
+  const handleFormAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatAmount(e.target.value);
+    setFormAmount(formatted);
+  };
+
+  const handleSubmitTransaction = async () => {
+    if (!activeShift) {
+      alert('Smena topilmadi');
+      return;
+    }
+
+    const cleanAmount = formAmount.replace(/\s/g, '');
+    const numAmount = parseFloat(cleanAmount);
+    
+    if (isNaN(numAmount) || numAmount <= 0) {
+      alert('Iltimos, to\'g\'ri miqdorni kiriting');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const transactionData = {
+        shift_id: activeShift.id,
+        amount: numAmount,
+        description: formDescription.trim() || (activeTab === 'Xarajat' ? 'Xarajat' : activeTab),
+        category: activeTab,
+        type: activeTab === 'Xarajat' ? 'chiqim' as const : 'kirim' as const,
+        sub_category: activeTab === 'Xarajat' && activeSubTab ? activeSubTab : undefined
+      };
+
+      await saveTransaction(transactionData);
+      
+      // Reset form
+      setFormAmount('');
+      setFormDescription('');
+      
+      // Refresh transactions
+      const trans = await getTransactionsByShift(activeShift.id);
+      setTransactions(trans);
+    } catch (err: any) {
+      alert('Xatolik: ' + (err.message || 'Noma\'lum xatolik'));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleEditAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -430,6 +482,95 @@ const XPro: React.FC = () => {
               <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-2xl flex items-center justify-center"><Calculator size={24} /></div>
             </div>
           </div>
+
+          {/* TRANSACTION FORM - For Kassa, Click, Uzcard, Humo tabs */}
+          {['Kassa', 'Click', 'Uzcard', 'Humo'].includes(activeTab) && (
+            <div className="bg-white dark:bg-slate-900 hacker:bg-black rounded-[2rem] border-2 border-green-200 dark:border-green-900/30 shadow-lg p-6">
+              <h3 className="text-green-600 dark:text-green-400 font-bold text-lg mb-4">Savdo</h3>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={formAmount}
+                    onChange={handleFormAmountChange}
+                    placeholder="0"
+                    className="flex-1 p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl outline-none font-bold text-lg text-slate-900 dark:text-white focus:border-green-500 focus:ring-2 focus:ring-green-200 dark:focus:ring-green-900"
+                  />
+                  <span className="text-slate-600 dark:text-slate-400 font-bold">so'm</span>
+                </div>
+                <input
+                  type="text"
+                  value={formDescription}
+                  onChange={(e) => setFormDescription(e.target.value)}
+                  placeholder="Izoh (ixtiyoriy)..."
+                  className="w-full p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-sm text-slate-700 dark:text-slate-300 focus:border-green-500 focus:ring-2 focus:ring-green-200 dark:focus:ring-green-900"
+                />
+                <button
+                  onClick={handleSubmitTransaction}
+                  disabled={isSubmitting || !formAmount}
+                  className="w-full py-4 bg-green-600 hover:bg-green-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <RefreshCcw className="animate-spin" size={20} />
+                      Saqlanmoqda...
+                    </>
+                  ) : (
+                    <>
+                      <Check size={20} />
+                      Saqlash
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* EXPENSE FORM - For Xarajat tab */}
+          {activeTab === 'Xarajat' && (
+            <div className="bg-white dark:bg-slate-900 hacker:bg-black rounded-[2rem] border-2 border-red-200 dark:border-red-900/30 shadow-lg p-6">
+              <h3 className="text-red-600 dark:text-red-400 font-bold text-lg mb-4">Xarajat</h3>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={formAmount}
+                    onChange={handleFormAmountChange}
+                    placeholder="0"
+                    className="flex-1 p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl outline-none font-bold text-lg text-slate-900 dark:text-white focus:border-red-500 focus:ring-2 focus:ring-red-200 dark:focus:ring-red-900"
+                  />
+                  <span className="text-slate-600 dark:text-slate-400 font-bold">so'm</span>
+                </div>
+                <input
+                  type="text"
+                  value={formDescription}
+                  onChange={(e) => setFormDescription(e.target.value)}
+                  placeholder="Izoh (ixtiyoriy)..."
+                  className="w-full p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-sm text-slate-700 dark:text-slate-300 focus:border-red-500 focus:ring-2 focus:ring-red-200 dark:focus:ring-red-900"
+                />
+                <button
+                  onClick={handleSubmitTransaction}
+                  disabled={isSubmitting || !formAmount || !activeSubTab}
+                  className="w-full py-4 bg-red-600 hover:bg-red-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <RefreshCcw className="animate-spin" size={20} />
+                      Saqlanmoqda...
+                    </>
+                  ) : (
+                    <>
+                      <Check size={20} />
+                      Saqlash
+                    </>
+                  )}
+                </button>
+                {!activeSubTab && (
+                  <p className="text-xs text-red-500 text-center">Iltimos, avval kategoriyani tanlang</p>
+                )}
+              </div>
+            </div>
+          )}
 
           {activeTab === 'Xarajat' && (
             <div className="space-y-2">
