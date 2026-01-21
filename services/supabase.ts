@@ -20,6 +20,16 @@ export const createExpenseCategory = async (name: string): Promise<ExpenseCatego
   return data;
 };
 
+export const updateExpenseCategory = async (id: string, name: string): Promise<void> => {
+  const { error } = await supabase.from('expense_categories').update({ name }).eq('id', id);
+  if (error) throw error;
+};
+
+export const deleteExpenseCategory = async (id: string): Promise<void> => {
+  const { error } = await supabase.from('expense_categories').delete().eq('id', id);
+  if (error) throw error;
+};
+
 // SHIFT FUNCTIONS
 export const getActiveShift = async (): Promise<Shift | null> => {
   try {
