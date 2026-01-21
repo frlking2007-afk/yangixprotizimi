@@ -607,6 +607,56 @@ const XPro: React.FC = () => {
             </div>
           )}
 
+          {/* KPI Cards for each Expense Category */}
+          {activeTab === 'Xarajat' && activeSubTab && (() => {
+            const categorySavdo = transactions
+              .filter(t => t.category === 'Xarajat' && t.sub_category === activeSubTab && t.type === 'kirim')
+              .reduce((acc, curr) => acc + curr.amount, 0);
+            
+            const categoryXarajat = transactions
+              .filter(t => t.category === 'Xarajat' && t.sub_category === activeSubTab && t.type === 'chiqim')
+              .reduce((acc, curr) => acc + curr.amount, 0);
+            
+            const categoryQolgan = categorySavdo - categoryXarajat;
+            
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white dark:bg-slate-900 hacker:bg-black p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between group">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Savdo</p>
+                    <div className="flex items-baseline gap-1">
+                      <h3 className="text-2xl font-black text-slate-900 dark:text-white">{categorySavdo.toLocaleString()}</h3>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">so'm</span>
+                    </div>
+                  </div>
+                  <div className="w-12 h-12 bg-green-50 dark:bg-green-900/20 text-green-600 rounded-2xl flex items-center justify-center"><ArrowUpRight size={24} /></div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-900 hacker:bg-black p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between group">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Umumiy Xarajat</p>
+                    <div className="flex items-baseline gap-1">
+                      <h3 className="text-2xl font-black text-red-500">{categoryXarajat.toLocaleString()}</h3>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">so'm</span>
+                    </div>
+                  </div>
+                  <div className="w-12 h-12 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-2xl flex items-center justify-center"><ArrowDownRight size={24} /></div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-900 hacker:bg-black p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between group">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Qolgan Pul</p>
+                    <div className="flex items-baseline gap-1">
+                      <h3 className={`text-2xl font-black ${categoryQolgan >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-orange-500'}`}>{categoryQolgan.toLocaleString()}</h3>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">so'm</span>
+                    </div>
+                  </div>
+                  <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-2xl flex items-center justify-center"><Calculator size={24} /></div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* EXPENSE FORM - For Xarajat tab - Kategoriyalar va So'nggi operatsiyalar orasida */}
           {activeTab === 'Xarajat' && (
             <div className="bg-white dark:bg-slate-900 hacker:bg-black rounded-[2rem] border-2 border-red-200 dark:border-red-900/30 shadow-lg p-6">
