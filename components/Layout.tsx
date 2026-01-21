@@ -64,8 +64,9 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-16 bg-white dark:bg-slate-900 hacker:bg-black border-b border-slate-200 dark:border-slate-800 hacker:border-[#0f0] flex items-center justify-between px-8">
+      <main className="flex-1 flex flex-col min-w-0">
+        {/* Sticky Header */}
+        <header className="sticky top-0 z-30 h-16 bg-white dark:bg-slate-900 hacker:bg-black border-b border-slate-200 dark:border-slate-800 hacker:border-[#0f0] flex items-center justify-between px-8 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200 hacker:text-[#0f0] capitalize hacker:font-mono">
             {activeTab === 'xpro' ? 'Dashboard' : activeTab === 'sozlama' ? 'Sozlamalar' : activeTab}
           </h2>
@@ -74,7 +75,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-8">
+        {/* Content Area */}
+        <div className="flex-1 p-4 md:p-8">
           {children}
         </div>
       </main>
