@@ -5,7 +5,7 @@ import {
   Banknote, TrendingDown, Clock, 
   PlayCircle, RefreshCcw, 
   Edit2, X, Check, ArrowUpRight, ArrowDownRight, 
-  Calculator, Download, Printer
+  Calculator, Download, Printer, Save, Loader2
 } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 import { Transaction, Shift, ExpenseCategory } from '../types.ts';
@@ -13,10 +13,10 @@ import {
   getActiveShift, startNewShift, closeShift, 
   getTransactionsByShift, deleteTransaction,
   getExpenseCategories, updateTransaction, getDeletionPassword,
-  createExpenseCategory, updateExpenseCategory, deleteExpenseCategory
+  createExpenseCategory, updateExpenseCategory, deleteExpenseCategory,
+  saveTransaction
 } from '../services/supabase.ts';
 
-// StatCard komponentini hoisting xatolarining oldini olish uchun tepaga ko'chiramiz
 const StatCard = ({ label, val, icon, color }: { label: string, val: number, icon: React.ReactNode, color: 'green' | 'red' | 'indigo' }) => {
   const colorClasses = {
     green: "bg-green-50 text-green-600",
@@ -25,10 +25,10 @@ const StatCard = ({ label, val, icon, color }: { label: string, val: number, ico
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between">
+    <div className="bg-white dark:bg-slate-900 hacker:bg-black p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between">
       <div>
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-        <h3 className={`text-2xl font-black ${color === 'red' ? 'text-red-500' : 'text-slate-900 dark:text-white'}`}>
+        <h3 className={`text-2xl font-black ${color === 'red' ? 'text-red-500' : 'text-slate-900 dark:text-white hacker:text-[#0f0]'}`}>
           {(val || 0).toLocaleString()} <span className="text-[10px] text-slate-400">so'm</span>
         </h3>
       </div>
@@ -44,10 +44,18 @@ const XPro: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  // Add missing state for exporting images
   const [isExporting, setIsExporting] = useState(false);
   
   const [activeTab, setActiveTab] = useState<string>('Kassa');
   const [activeSubTab, setActiveSubTab] = useState<string | null>(null);
+  
+  // New Transaction Form State
+  const [amountInput, setAmountInput] = useState('');
+  const [descInput, setDescInput] = useState('');
+
+  // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState({ amount: '', description: '' });
 
@@ -88,9 +96,50 @@ const XPro: React.FC = () => {
     return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   };
 
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAmountInput(formatAmount(e.target.value));
+  };
+
   const handleEditAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatAmount(e.target.value);
-    setEditData({ ...editData, amount: formatted });
+    setEditData({ ...editData, amount: formatAmount(e.target.value) });
+  };
+
+  const handleSaveTransaction = async () => {
+    if (!activeShift) return;
+    const cleanAmount = amountInput.replace(/\s/g, '');
+    const numAmount = parseFloat(cleanAmount);
+    
+    if (isNaN(numAmount) || numAmount <= 0) {
+      alert("Iltimos, summani to'g'ri kiriting");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const isExpense = activeTab === 'Xarajat';
+      const type = isExpense ? 'chiqim' : 'kirim';
+      
+      await saveTransaction({
+        shift_id: activeShift.id,
+        amount: numAmount,
+        category: activeTab,
+        sub_category: isExpense ? activeSubTab || undefined : undefined,
+        description: descInput,
+        type: type
+      });
+
+      // Reset form
+      setAmountInput('');
+      setDescInput('');
+      
+      // Refresh transactions
+      const trans = await getTransactionsByShift(activeShift.id);
+      setTransactions(trans || []);
+    } catch (err: any) {
+      alert("Xato: " + err.message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleStartShift = async () => {
@@ -142,7 +191,7 @@ const XPro: React.FC = () => {
       if (confirm(`"${name}" o'chirilsinmi?`)) {
         await deleteExpenseCategory(id);
         setExpenseCategories(expenseCategories.filter(c => c.id !== id));
-        if (activeSubTab === name) setActiveSubTab(null);
+        if (activeSubTab === name) setActiveSubTab(expenseCategories.length > 0 ? expenseCategories[0].name : null);
       }
     } catch (err: any) {
       alert("Xato: " + err.message);
@@ -285,7 +334,7 @@ const XPro: React.FC = () => {
       <div className="bg-white dark:bg-slate-900 hacker:bg-black p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Clock size={20} className="text-green-600" />
-          <h3 className="font-bold text-slate-800 dark:text-white text-sm">{activeShift.name}</h3>
+          <h3 className="font-bold text-slate-800 dark:text-white hacker:text-[#0f0] text-sm">{activeShift.name}</h3>
         </div>
         <button onClick={() => closeShift(activeShift.id).then(() => window.location.reload())} className="px-4 py-2 bg-red-50 text-red-600 font-bold rounded-xl text-xs">Yopish</button>
       </div>
@@ -318,7 +367,9 @@ const XPro: React.FC = () => {
               </div>
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 flex gap-2 border-t">
                 <button onClick={() => handlePrint(cat.name)} className="flex-1 py-3 bg-white border rounded-xl flex items-center justify-center gap-2 text-xs font-bold"><Printer size={14} /> Chop etish</button>
-                <button onClick={() => handleDownloadImage(cat.name)} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl flex items-center justify-center gap-2 text-xs font-bold">Rasm</button>
+                <button onClick={() => handleDownloadImage(cat.name)} disabled={isExporting} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl flex items-center justify-center gap-2 text-xs font-bold disabled:opacity-50">
+                   {isExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Rasm
+                </button>
               </div>
             </div>
           ))}
@@ -329,6 +380,44 @@ const XPro: React.FC = () => {
             <StatCard label="Savdo (Jami)" val={totalIn} icon={<ArrowUpRight />} color="green" />
             <StatCard label="Umumiy Xarajat" val={totalOut} icon={<ArrowDownRight />} color="red" />
             <StatCard label="Qolgan Pul" val={totalBalance} icon={<Calculator />} color="indigo" />
+          </div>
+
+          {/* New Transaction Form */}
+          <div className="bg-white dark:bg-slate-900 hacker:bg-black p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
+             <div className="flex items-center gap-2 mb-2">
+                <Plus size={18} className="text-indigo-600" />
+                <h4 className="font-bold text-sm uppercase tracking-widest text-slate-800 dark:text-white hacker:text-[#0f0]">Yangi operatsiya ({activeTab})</h4>
+             </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Summa</label>
+                   <input 
+                    type="text" 
+                    value={amountInput}
+                    onChange={handleAmountChange}
+                    placeholder="0"
+                    className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl outline-none font-black text-lg dark:text-white hacker:text-[#0f0]"
+                   />
+                </div>
+                <div>
+                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Tavsif (Ixtiyoriy)</label>
+                   <input 
+                    type="text" 
+                    value={descInput}
+                    onChange={(e) => setDescInput(e.target.value)}
+                    placeholder="Operatsiya haqida..."
+                    className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl outline-none font-medium dark:text-white hacker:text-[#0f0]"
+                   />
+                </div>
+             </div>
+             <button 
+               onClick={handleSaveTransaction}
+               disabled={isSaving}
+               className="w-full py-4 bg-slate-900 dark:bg-indigo-600 text-white font-black rounded-2xl flex items-center justify-center gap-3 hover:bg-black transition-all shadow-lg active:scale-[0.98] disabled:opacity-50"
+             >
+                {isSaving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+                Saqlash
+             </button>
           </div>
 
           {activeTab === 'Xarajat' && (
@@ -366,7 +455,7 @@ const XPro: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t.type === 'kirim' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{t.type === 'kirim' ? <Plus size={18} /> : <TrendingDown size={18} />}</div>
-                        <div><p className="font-bold text-slate-800 dark:text-white text-[13px]">{t.description}</p><p className="text-[10px] text-slate-400">{t.sub_category}</p></div>
+                        <div><p className="font-bold text-slate-800 dark:text-white text-[13px]">{t.description || 'Tavsifsiz'}</p><p className="text-[10px] text-slate-400 uppercase font-bold">{t.sub_category || t.category}</p></div>
                       </div>
                       <div className="flex items-center gap-4 text-right">
                         <p className={`font-black text-sm ${t.type === 'kirim' ? 'text-green-600' : 'text-red-500'}`}>{(t.amount || 0).toLocaleString()}</p>
@@ -376,6 +465,9 @@ const XPro: React.FC = () => {
                   )}
                 </div>
               ))}
+              {filteredTransactions.length === 0 && (
+                <div className="text-center py-10 text-slate-400 italic text-sm">Ushbu bo'limda amallar mavjud emas</div>
+              )}
             </div>
           </div>
         </div>
