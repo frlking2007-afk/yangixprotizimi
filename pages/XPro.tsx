@@ -252,7 +252,7 @@ const XPro: React.FC = () => {
     if (!activeShift) return;
     
     // Filter transactions for this specific category/report
-    const catTransactions = transactions.filter(t => 
+    const catTransactions = (transactions || []).filter(t => 
       t.category === 'Xarajat' && t.sub_category === catName
     );
     
@@ -349,12 +349,12 @@ const XPro: React.FC = () => {
   };
 
   // GLOBAL STATS
-  const totalIn = transactions.filter(t => t.type === 'kirim').reduce((acc, curr) => acc + curr.amount, 0);
-  const totalOut = transactions.filter(t => t.type === 'chiqim').reduce((acc, curr) => acc + curr.amount, 0);
+  const totalIn = (transactions || []).filter(t => t.type === 'kirim').reduce((acc, curr) => acc + curr.amount, 0);
+  const totalOut = (transactions || []).filter(t => t.type === 'chiqim').reduce((acc, curr) => acc + curr.amount, 0);
   const totalBalance = totalIn - totalOut;
   
   // Faqat eng so'nggi "Savdo" transaksiyasi (Kassa kategoryasidagi "Savdo" description'li xarajat)
-  const savdoTransactions = transactions
+  const savdoTransactions = (transactions || [])
     .filter(t => t.category === 'Kassa' && t.type === 'chiqim' && t.description === 'Savdo')
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const savdoTotal = savdoTransactions.length > 0 ? savdoTransactions[0].amount : 0;
@@ -406,7 +406,7 @@ const XPro: React.FC = () => {
     }
   };
 
-  const filteredTransactions = transactions.filter(t => {
+  const filteredTransactions = (transactions || []).filter(t => {
     if (activeTab === 'Xarajat') {
       return t.category === 'Xarajat' && (activeSubTab ? t.sub_category === activeSubTab : true);
     }
@@ -616,11 +616,11 @@ const XPro: React.FC = () => {
 
           {/* KPI Cards for each Expense Category */}
           {activeTab === 'Xarajat' && activeSubTab && (() => {
-            const categorySavdo = transactions
+            const categorySavdo = (transactions || [])
               .filter(t => t.category === 'Xarajat' && t.sub_category === activeSubTab && t.type === 'kirim')
               .reduce((acc, curr) => acc + curr.amount, 0);
             
-            const categoryXarajat = transactions
+            const categoryXarajat = (transactions || [])
               .filter(t => t.category === 'Xarajat' && t.sub_category === activeSubTab && t.type === 'chiqim')
               .reduce((acc, curr) => acc + curr.amount, 0);
             
