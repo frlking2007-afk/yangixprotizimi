@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { User, Bell, Shield, Database, Globe, Smartphone } from 'lucide-react';
+import { User, Bell, Shield, Database } from 'lucide-react';
 
 const Settings: React.FC = () => {
   const sections = [
@@ -28,11 +28,13 @@ const Settings: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm flex items-center gap-8">
-        <img src="https://picsum.photos/100" className="w-24 h-24 rounded-3xl object-cover ring-4 ring-slate-50" />
+      <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm flex items-center gap-6">
+        <div className="w-20 h-20 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+          <User size={40} />
+        </div>
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Admin Foydalanuvchi</h2>
-          <p className="text-slate-500 mb-4">admin@xisobot.uz</p>
+          <p className="text-slate-500 mb-3">admin@xisobot.uz</p>
           <div className="flex gap-2">
             <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold">Premium</span>
             <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-bold">ID: 88219</span>

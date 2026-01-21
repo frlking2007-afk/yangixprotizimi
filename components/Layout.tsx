@@ -22,7 +22,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
       {/* Mobile Sidebar Toggle */}
       <button 
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className="lg:hidden fixed top-4 right-4 z-50 p-2 bg-indigo-600 text-white rounded-lg shadow-lg"
+        className="lg:hidden fixed top-4 right-4 z-50 p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-200"
       >
         {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
@@ -79,12 +79,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           <h2 className="text-lg font-semibold text-slate-700 capitalize">
             {activeTab === 'xpro' ? 'Dashboard' : activeTab}
           </h2>
+          {/* O'ng tarafdagi foydalanuvchi ma'lumotlari olib tashlandi */}
           <div className="flex items-center gap-4">
-             <div className="hidden md:flex flex-col items-end">
-               <span className="text-sm font-bold text-slate-900">Admin</span>
-               <span className="text-xs text-slate-500">Super Foydalanuvchi</span>
-             </div>
-             <img src="https://picsum.photos/40" className="w-10 h-10 rounded-full border-2 border-indigo-100" />
           </div>
         </header>
 
