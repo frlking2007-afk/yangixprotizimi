@@ -304,54 +304,6 @@ const XPro: React.FC = () => {
         </button>
       </div>
 
-      {/* Stats Cards Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <button 
-          onClick={() => setActiveTab('Kassa')}
-          className="bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-2xl border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-800 transition-all text-left flex items-center justify-between group"
-        >
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Savdo (Jami)</p>
-            <h3 className="text-xl font-black text-slate-800 dark:text-white hacker:text-[#0f0] hacker:font-mono">
-              {totalSales.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span>
-            </h3>
-          </div>
-          <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hacker:text-[#0f0] rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-            <ArrowUpRight size={24} />
-          </div>
-        </button>
-
-        <button 
-          onClick={() => {
-            setActiveTab('Xarajat');
-            if (expenseCategories.length > 0) setActiveSubTab(expenseCategories[0].name);
-          }}
-          className="bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-2xl border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm hover:shadow-md hover:border-red-300 dark:hover:border-red-900 transition-all text-left flex items-center justify-between group"
-        >
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Umumiy xarajat</p>
-            <h3 className="text-xl font-black text-red-500 dark:text-red-400 hacker:text-[#f00] hacker:font-mono">
-              {totalExpenses.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span>
-            </h3>
-          </div>
-          <div className="w-12 h-12 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hacker:text-[#f00] rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-            <ArrowDownRight size={24} />
-          </div>
-        </button>
-
-        <div className="bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-2xl border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Qolgan pul</p>
-            <h3 className={`text-xl font-black hacker:font-mono ${balance >= 0 ? 'text-green-600 dark:text-green-400 hacker:text-[#0f0]' : 'text-orange-500'}`}>
-              {balance.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span>
-            </h3>
-          </div>
-          <div className={`w-12 h-12 ${balance >= 0 ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' : 'bg-orange-50 text-orange-500'} hacker:text-[#0f0] rounded-xl flex items-center justify-center`}>
-            <Calculator size={24} />
-          </div>
-        </div>
-      </div>
-
       {/* Tabs Menu */}
       <div className="flex flex-wrap items-center gap-2">
         {mainTabs.map((tab) => (
@@ -402,22 +354,7 @@ const XPro: React.FC = () => {
                       </div>
                     </div>
                     
-                    <div className="space-y-2 mb-4 max-h-48 overflow-y-auto pr-1">
-                      {catTransactions.map(t => (
-                        <div key={t.id} className="flex items-center justify-between py-1 border-b border-slate-50 dark:border-slate-800 hacker:border-[#0f0]/20 text-[11px]">
-                          <span className="text-slate-600 dark:text-slate-400 hacker:text-[#0f0]/80 font-medium hacker:font-mono">{t.description}</span>
-                          <span className="font-bold text-red-500 hacker:text-[#f00] hacker:font-mono">{t.amount.toLocaleString()}</span>
-                        </div>
-                      ))}
-                      {catTransactions.length === 0 && (
-                        <p className="text-center text-[11px] text-slate-300 italic py-4 hacker:font-mono">Operatsiyalar yo'q</p>
-                      )}
-                    </div>
-
-                    <div className="pt-3 border-t-2 border-slate-100 dark:border-slate-800 hacker:border-[#0f0] flex items-center justify-between">
-                      <span className="text-xs font-black text-slate-400 uppercase hacker:font-mono">Jami:</span>
-                      <span className="text-lg font-black text-slate-800 dark:text-white hacker:text-[#0f0] hacker:font-mono">{catTotal.toLocaleString()} <span className="text-[10px] font-bold">so'm</span></span>
-                    </div>
+                    {/* Circle-indicated sections removed as requested */}
                   </div>
                   {/* Exportable content end */}
 
@@ -555,7 +492,7 @@ const XPro: React.FC = () => {
                             />
                           </div>
                           <div className="flex justify-end gap-2">
-                            <button onClick={cancelEdit} className="p-2 text-slate-400 hover:text-slate-600 bg-slate-100 dark:bg-slate-800 rounded-lg"><X size={16} /></button>
+                            <button onClick={cancelEdit} className="p-2 text-slate-400 hacker:text-slate-400 hover:text-slate-600 bg-slate-100 dark:bg-slate-800 hacker:bg-black rounded-lg"><X size={16} /></button>
                             <button onClick={() => saveEdit(t.id)} className="p-2 text-white bg-green-500 rounded-lg"><Check size={16} /></button>
                           </div>
                         </div>
@@ -595,6 +532,54 @@ const XPro: React.FC = () => {
                     <p className="text-slate-300 dark:text-slate-600 hacker:text-[#0f0]/40 font-bold italic text-sm hacker:font-mono">Ma'lumot yo'q</p>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+
+          {/* Stats Cards Row (Moved to the bottom) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+            <button 
+              onClick={() => setActiveTab('Kassa')}
+              className="bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-2xl border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-800 transition-all text-left flex items-center justify-between group"
+            >
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Savdo (Jami)</p>
+                <h3 className="text-xl font-black text-slate-800 dark:text-white hacker:text-[#0f0] hacker:font-mono">
+                  {totalSales.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span>
+                </h3>
+              </div>
+              <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hacker:text-[#0f0] rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <ArrowUpRight size={24} />
+              </div>
+            </button>
+
+            <button 
+              onClick={() => {
+                setActiveTab('Xarajat');
+                if (expenseCategories.length > 0) setActiveSubTab(expenseCategories[0].name);
+              }}
+              className="bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-2xl border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm hover:shadow-md hover:border-red-300 dark:hover:border-red-900 transition-all text-left flex items-center justify-between group"
+            >
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Umumiy xarajat</p>
+                <h3 className="text-xl font-black text-red-500 dark:text-red-400 hacker:text-[#f00] hacker:font-mono">
+                  {totalExpenses.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span>
+                </h3>
+              </div>
+              <div className="w-12 h-12 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hacker:text-[#f00] rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <ArrowDownRight size={24} />
+              </div>
+            </button>
+
+            <div className="bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-2xl border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Qolgan pul</p>
+                <h3 className={`text-xl font-black hacker:font-mono ${balance >= 0 ? 'text-green-600 dark:text-green-400 hacker:text-[#0f0]' : 'text-orange-500'}`}>
+                  {balance.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span>
+                </h3>
+              </div>
+              <div className={`w-12 h-12 ${balance >= 0 ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' : 'bg-orange-50 text-orange-500'} hacker:text-[#0f0] rounded-xl flex items-center justify-center`}>
+                <Calculator size={24} />
               </div>
             </div>
           </div>

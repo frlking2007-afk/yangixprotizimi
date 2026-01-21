@@ -101,6 +101,11 @@ export const getAllShifts = async (): Promise<Shift[]> => {
   }
 };
 
+export const deleteShift = async (shiftId: string): Promise<void> => {
+  const { error } = await supabase.from('shifts').delete().eq('id', shiftId);
+  if (error) throw error;
+};
+
 // TRANSACTION FUNCTIONS
 export const getTransactionsByShift = async (shiftId: string): Promise<Transaction[]> => {
   const { data, error } = await supabase
