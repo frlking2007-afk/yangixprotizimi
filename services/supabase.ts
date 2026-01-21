@@ -9,31 +9,46 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // SHIFT FUNCTIONS
 export const getActiveShift = async (): Promise<Shift | null> => {
-  const { data, error } = await supabase
-    .from('shifts')
-    .select('*')
-    .eq('status', 'active')
-    .single();
-  if (error) return null;
-  return data as Shift;
+  try {
+    const { data, error } = await supabase
+      .from('shifts')
+      .select('*')
+      .eq('status', 'active')
+      .maybeSingle(); // single() o'rniga maybeSingle() xatolik chiqishini kamaytiradi
+    
+    if (error) {
+      console.error("Shift yuklashda xato:", error.message);
+      return null;
+    }
+    return data as Shift;
+  } catch (err) {
+    return null;
+  }
 };
 
 export const startNewShift = async (): Promise<Shift | null> => {
   const now = new Date();
   const name = `Smena - ${now.toLocaleDateString('uz-UZ')} ${now.toLocaleTimeString('uz-UZ', {hour: '2-digit', minute:'2-digit'})}`;
+  
   const { data, error } = await supabase
     .from('shifts')
     .insert([{ name, status: 'active' }])
     .select()
     .single();
-  return error ? null : data as Shift;
+
+  if (error) {
+    console.error("Smena ochishda xato:", error.message);
+    throw new Error(error.message);
+  }
+  return data as Shift;
 };
 
 export const closeShift = async (shiftId: string): Promise<void> => {
-  await supabase
+  const { error } = await supabase
     .from('shifts')
     .update({ status: 'closed', end_date: new Date().toISOString() })
     .eq('id', shiftId);
+  if (error) throw error;
 };
 
 export const getAllShifts = async (): Promise<Shift[]> => {
@@ -57,7 +72,8 @@ export const saveTransaction = async (transaction: Omit<Transaction, 'id' | 'dat
     .insert([transaction])
     .select()
     .single();
-  return error ? null : data as Transaction;
+  if (error) throw error;
+  return data as Transaction;
 };
 
 export const deleteTransaction = async (id: string): Promise<void> => {

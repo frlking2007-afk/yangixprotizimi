@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { User, Bell, Shield, Database, Edit3, Save, X, LogOut } from 'lucide-react';
+import { User, Edit3, Save, X, LogOut } from 'lucide-react';
 import { getCurrentUser, updateUsername, logout } from '../services/auth';
 
 const Settings: React.FC = () => {
@@ -29,24 +29,6 @@ const Settings: React.FC = () => {
     }
   };
 
-  const sections = [
-    { 
-      title: 'Bildirishnomalar', 
-      icon: Bell, 
-      items: ['Telegram xabarlari', 'Elektron pochta', 'Kunlik hisobot'] 
-    },
-    { 
-      title: 'Xavfsizlik', 
-      icon: Shield, 
-      items: ['Ikki bosqichli autentifikatsiya', 'Kirishlar tarixi', 'Xavfsizlik kaliti'] 
-    },
-    { 
-      title: 'Ma\'lumotlar bazasi', 
-      icon: Database, 
-      items: ['Supabase ulanishi', 'Zaxira nusxasi (Backup)', 'Eksport (Excel/PDF)'] 
-    },
-  ];
-
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Profile Header */}
@@ -66,8 +48,8 @@ const Settings: React.FC = () => {
                 autoFocus
               />
               <div className="flex gap-2">
-                <button onClick={handleUpdateName} className="p-2 bg-green-50 text-green-600 rounded-xl hover:bg-green-100"><Save size={20} /></button>
-                <button onClick={() => setIsEditing(false)} className="p-2 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-100"><X size={20} /></button>
+                <button onClick={handleUpdateName} className="p-2 bg-green-50 text-green-600 rounded-xl hover:bg-green-100" title="Saqlash"><Save size={20} /></button>
+                <button onClick={() => setIsEditing(false)} className="p-2 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-100" title="Bekor qilish"><X size={20} /></button>
               </div>
             </div>
           ) : (
@@ -98,27 +80,8 @@ const Settings: React.FC = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {sections.map((section, idx) => (
-          <div key={idx} className="bg-white rounded-[2rem] p-7 border border-slate-100 shadow-sm">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
-                <section.icon size={20} />
-              </div>
-              <h3 className="font-bold text-slate-800">{section.title}</h3>
-            </div>
-            <ul className="space-y-1.5">
-              {section.items.map((item, i) => (
-                <li key={i}>
-                  <button className="w-full text-left px-4 py-3 text-sm text-slate-500 hover:bg-slate-50 hover:text-indigo-600 rounded-xl transition-all flex items-center justify-between group">
-                    {item}
-                    <span className="text-slate-200 group-hover:text-indigo-300 transition-colors">→</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+      <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm text-center">
+        <p className="text-slate-400 font-medium">Qo'shimcha sozlamalar tez orada qo'shiladi.</p>
       </div>
     </div>
   );

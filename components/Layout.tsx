@@ -14,7 +14,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   const menuItems = [
     { id: 'xpro', label: 'XPro', icon: Home },
     { id: 'xisobotlar', label: 'Hisobotlar', icon: BarChart2 },
-    { id: 'sozlama', label: 'Sozlama', icon: Settings },
+    { id: 'sozlama', label: 'Sozlamalar', icon: Settings },
   ];
 
   return (
@@ -77,9 +77,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8">
           <h2 className="text-lg font-semibold text-slate-700 capitalize">
-            {activeTab === 'xpro' ? 'Dashboard' : activeTab}
+            {activeTab === 'xpro' ? 'Dashboard' : activeTab === 'sozlama' ? 'Sozlamalar' : activeTab}
           </h2>
-          {/* O'ng tarafdagi foydalanuvchi ma'lumotlari olib tashlandi */}
           <div className="flex items-center gap-4">
           </div>
         </header>

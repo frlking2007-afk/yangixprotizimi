@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, Trash2, Edit2, Wallet, CreditCard, Download, 
   Banknote, TrendingDown, Save, Clock, CheckCircle2, 
-  PlayCircle, StopCircle, RefreshCcw
+  PlayCircle, StopCircle, RefreshCcw, AlertTriangle
 } from 'lucide-react';
 import { Transaction, TransactionType, Shift } from '../types';
 import { 
@@ -16,18 +16,24 @@ const XPro: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<string>('Kassa');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({ amount: '', description: '' });
 
   const initShift = async () => {
     setLoading(true);
-    const shift = await getActiveShift();
-    setActiveShift(shift);
-    if (shift) {
-      const trans = await getTransactionsByShift(shift.id);
-      setTransactions(trans);
+    try {
+      const shift = await getActiveShift();
+      setActiveShift(shift);
+      if (shift) {
+        const trans = await getTransactionsByShift(shift.id);
+        setTransactions(trans);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -35,15 +41,25 @@ const XPro: React.FC = () => {
   }, []);
 
   const handleStartShift = async () => {
-    const shift = await startNewShift();
-    if (shift) setActiveShift(shift);
+    setErrorMsg(null);
+    try {
+      const shift = await startNewShift();
+      if (shift) setActiveShift(shift);
+    } catch (err: any) {
+      setErrorMsg("Smena ochishda xatolik: " + err.message);
+      alert("Xatolik: Supabase-da 'shifts' jadvali mavjud emas yoki ulanishda muammo. SQL kodini ishga tushirganingizga ishonch hosil qiling.");
+    }
   };
 
   const handleCloseShift = async () => {
     if (activeShift && confirm("Smenani yopmoqchimisiz? Yopilgandan so'ng ma'lumot kiritib bo'lmaydi.")) {
-      await closeShift(activeShift.id);
-      setActiveShift(null);
-      setTransactions([]);
+      try {
+        await closeShift(activeShift.id);
+        setActiveShift(null);
+        setTransactions([]);
+      } catch (err) {
+        alert("Smenani yopishda xato yuz berdi.");
+      }
     }
   };
 
@@ -51,19 +67,23 @@ const XPro: React.FC = () => {
     e.preventDefault();
     if (!formData.amount || !formData.description || !activeShift) return;
 
-    const type: TransactionType = activeCategory === 'Xarajat' ? 'chiqim' : 'kirim';
-    
-    await saveTransaction({
-      shift_id: activeShift.id,
-      amount: parseFloat(formData.amount),
-      description: formData.description,
-      category: activeCategory,
-      type: type
-    });
+    try {
+      const type: TransactionType = activeCategory === 'Xarajat' ? 'chiqim' : 'kirim';
+      
+      await saveTransaction({
+        shift_id: activeShift.id,
+        amount: parseFloat(formData.amount),
+        description: formData.description,
+        category: activeCategory,
+        type: type
+      });
 
-    setFormData({ amount: '', description: '' });
-    const trans = await getTransactionsByShift(activeShift.id);
-    setTransactions(trans);
+      setFormData({ amount: '', description: '' });
+      const trans = await getTransactionsByShift(activeShift.id);
+      setTransactions(trans);
+    } catch (err) {
+      alert("Ma'lumotni saqlashda xato yuz berdi.");
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -101,6 +121,14 @@ const XPro: React.FC = () => {
         </div>
         <h2 className="text-3xl font-black text-slate-800 mb-3">Xush kelibsiz!</h2>
         <p className="text-slate-500 mb-8 max-w-sm">Kassa operatsiyalarini boshlash uchun avval yangi smena ochishingiz kerak.</p>
+        
+        {errorMsg && (
+          <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-2xl flex items-center gap-3 border border-red-100 max-w-md">
+            <AlertTriangle size={20} />
+            <p className="text-xs font-bold text-left">{errorMsg}</p>
+          </div>
+        )}
+
         <button 
           onClick={handleStartShift}
           className="px-10 py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 flex items-center gap-3 scale-105 hover:scale-110 active:scale-95"
