@@ -13,7 +13,7 @@ import {
   getActiveShift, startNewShift, closeShift, 
   getTransactionsByShift, saveTransaction, deleteTransaction,
   getExpenseCategories, updateTransaction, getDeletionPassword,
-  createExpenseCategory
+  createExpenseCategory, updateExpenseCategory, deleteExpenseCategory
 } from '../services/supabase';
 
 const XPro: React.FC = () => {
@@ -114,6 +114,44 @@ const XPro: React.FC = () => {
       }
     } catch (err: any) {
       alert("Kategoriya qo'shishda xato: " + err.message);
+    }
+  };
+
+  const handleEditCategoryName = async (e: React.MouseEvent, id: string, oldName: string) => {
+    e.stopPropagation();
+    const newName = prompt("Kategoriya uchun yangi nom kiriting:", oldName);
+    if (!newName || newName.trim() === '' || newName === oldName) return;
+
+    try {
+      await updateExpenseCategory(id, newName.trim());
+      setExpenseCategories(expenseCategories.map(c => c.id === id ? { ...c, name: newName.trim() } : c));
+      if (activeSubTab === oldName) setActiveSubTab(newName.trim());
+    } catch (err: any) {
+      alert("Nomni o'zgartirishda xato: " + err.message);
+    }
+  };
+
+  const handleDeleteCategoryWithConfirmation = async (e: React.MouseEvent, id: string, name: string) => {
+    e.stopPropagation();
+    const password = prompt(`"${name}" kategoriyasini o'chirish uchun parolni kiriting:`);
+    if (password === null) return;
+
+    try {
+      const correctPassword = await getDeletionPassword();
+      if (password !== correctPassword) {
+        alert("Parol noto'g'ri!");
+        return;
+      }
+
+      if (confirm(`Haqiqatan ham "${name}" kategoriyasini o'chirmoqchimisiz? Ushbu kategoriyadagi amallar o'chmaydi.`)) {
+        await deleteExpenseCategory(id);
+        setExpenseCategories(expenseCategories.filter(c => c.id !== id));
+        if (activeSubTab === name) {
+          setActiveSubTab(expenseCategories.length > 1 ? expenseCategories.find(c => c.id !== id)?.name || null : null);
+        }
+      }
+    } catch (err: any) {
+      alert("O'chirishda xato: " + err.message);
     }
   };
 
@@ -406,8 +444,28 @@ const XPro: React.FC = () => {
               <div className="flex items-center justify-between px-1 text-[10px] font-bold text-slate-400 hacker:text-[#0f0] uppercase tracking-widest hacker:font-mono">Kategoriyalar</div>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2">
                 {expenseCategories.map(cat => (
-                  <div key={cat.id} className={`relative group h-12 rounded-xl border transition-all cursor-pointer flex items-center justify-center p-2 ${activeSubTab === cat.name ? 'bg-indigo-600 hacker:bg-[#002200] border-indigo-600 hacker:border-[#0f0] text-white hacker:text-[#0f0]' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 hacker:text-[#0f0]/60'} hacker:rounded-none hacker:font-mono`} onClick={() => { setActiveSubTab(cat.name); setEntryType('chiqim'); }}>
-                    <span className="font-bold text-center break-words w-full text-[13px] leading-tight">{cat.name}</span>
+                  <div 
+                    key={cat.id} 
+                    className={`relative group h-12 rounded-xl border transition-all cursor-pointer flex items-center justify-center p-2 ${activeSubTab === cat.name ? 'bg-indigo-600 hacker:bg-[#002200] border-indigo-600 hacker:border-[#0f0] text-white hacker:text-[#0f0]' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 hacker:text-[#0f0]/60'} hacker:rounded-none hacker:font-mono`} 
+                    onClick={() => { setActiveSubTab(cat.name); setEntryType('chiqim'); }}
+                  >
+                    <span className="font-bold text-center break-words w-full text-[13px] leading-tight px-1">{cat.name}</span>
+                    
+                    {/* Actions Overlay */}
+                    <div className="absolute -top-1 -right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                       <button 
+                         onClick={(e) => handleEditCategoryName(e, cat.id, cat.name)}
+                         className="p-1.5 bg-white dark:bg-slate-800 text-slate-400 hover:text-indigo-600 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700"
+                       >
+                         <Edit2 size={10} />
+                       </button>
+                       <button 
+                         onClick={(e) => handleDeleteCategoryWithConfirmation(e, cat.id, cat.name)}
+                         className="p-1.5 bg-white dark:bg-slate-800 text-slate-400 hover:text-red-500 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700"
+                       >
+                         <X size={10} />
+                       </button>
+                    </div>
                   </div>
                 ))}
                 {/* Yangi kategoriya qo'shish tugmasi */}
