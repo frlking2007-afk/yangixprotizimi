@@ -526,7 +526,27 @@ const XPro: React.FC = () => {
             </div>
           )}
 
-          {/* EXPENSE FORM - For Xarajat tab */}
+          {activeTab === 'Xarajat' && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between px-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kategoriyalar</div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2">
+                {expenseCategories.map(cat => (
+                  <div key={cat.id} className={`relative h-12 rounded-xl border transition-all cursor-pointer flex items-center justify-center p-2 ${activeSubTab === cat.name ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400'}`} onClick={() => setActiveSubTab(cat.name)}>
+                    <span className="font-bold text-center break-words w-full text-[13px] leading-tight">{cat.name}</span>
+                    
+                    {/* Control Buttons - ALWAYS VISIBLE */}
+                    <div className="absolute -top-1.5 -right-1.5 flex gap-1 bg-white dark:bg-slate-800 p-0.5 rounded-lg shadow-md border border-slate-100 dark:border-slate-700 z-10">
+                       <button onClick={(e) => handleEditCategoryName(e, cat.id, cat.name)} className="p-1 text-slate-400 hover:text-indigo-600 rounded-md"><Edit2 size={10} /></button>
+                       <button onClick={(e) => handleDeleteCategoryWithConfirmation(e, cat.id, cat.name)} className="p-1 text-slate-400 hover:text-red-500 rounded-md"><X size={10} /></button>
+                    </div>
+                  </div>
+                ))}
+                <button onClick={handleAddCategory} className="h-12 rounded-xl border-2 border-dashed border-indigo-200 dark:border-slate-800 flex items-center justify-center gap-2 text-indigo-500 hover:bg-indigo-50 transition-all"><Plus size={20} /><span className="font-bold text-[12px]">Qo'shish</span></button>
+              </div>
+            </div>
+          )}
+
+          {/* EXPENSE FORM - For Xarajat tab - Kategoriyalar va So'nggi operatsiyalar orasida */}
           {activeTab === 'Xarajat' && (
             <div className="bg-white dark:bg-slate-900 hacker:bg-black rounded-[2rem] border-2 border-red-200 dark:border-red-900/30 shadow-lg p-6">
               <h3 className="text-red-600 dark:text-red-400 font-bold text-lg mb-4">Xarajat</h3>
@@ -568,26 +588,6 @@ const XPro: React.FC = () => {
                 {!activeSubTab && (
                   <p className="text-xs text-red-500 text-center">Iltimos, avval kategoriyani tanlang</p>
                 )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'Xarajat' && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between px-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kategoriyalar</div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2">
-                {expenseCategories.map(cat => (
-                  <div key={cat.id} className={`relative h-12 rounded-xl border transition-all cursor-pointer flex items-center justify-center p-2 ${activeSubTab === cat.name ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400'}`} onClick={() => setActiveSubTab(cat.name)}>
-                    <span className="font-bold text-center break-words w-full text-[13px] leading-tight">{cat.name}</span>
-                    
-                    {/* Control Buttons - ALWAYS VISIBLE */}
-                    <div className="absolute -top-1.5 -right-1.5 flex gap-1 bg-white dark:bg-slate-800 p-0.5 rounded-lg shadow-md border border-slate-100 dark:border-slate-700 z-10">
-                       <button onClick={(e) => handleEditCategoryName(e, cat.id, cat.name)} className="p-1 text-slate-400 hover:text-indigo-600 rounded-md"><Edit2 size={10} /></button>
-                       <button onClick={(e) => handleDeleteCategoryWithConfirmation(e, cat.id, cat.name)} className="p-1 text-slate-400 hover:text-red-500 rounded-md"><X size={10} /></button>
-                    </div>
-                  </div>
-                ))}
-                <button onClick={handleAddCategory} className="h-12 rounded-xl border-2 border-dashed border-indigo-200 dark:border-slate-800 flex items-center justify-center gap-2 text-indigo-500 hover:bg-indigo-50 transition-all"><Plus size={20} /><span className="font-bold text-[12px]">Qo'shish</span></button>
               </div>
             </div>
           )}
