@@ -267,12 +267,12 @@ const XPro: React.FC = () => {
     } catch (err) { alert('Rasmga saqlashda xatolik yuz berdi.'); } finally { setIsExporting(false); }
   };
 
-  // GLOBAL STATS (Across all categories for the active shift)
+  // GLOBAL STATS
   const totalIn = transactions.filter(t => t.type === 'kirim').reduce((acc, curr) => acc + curr.amount, 0);
   const totalOut = transactions.filter(t => t.type === 'chiqim').reduce((acc, curr) => acc + curr.amount, 0);
   const totalBalance = totalIn - totalOut;
 
-  // Transaction Lists for active tab
+  // Transaction Lists
   const filteredTransactions = transactions.filter(t => {
     if (activeTab === 'Xarajat') {
       return t.category === 'Xarajat' && (activeSubTab ? t.sub_category === activeSubTab : true);
@@ -280,7 +280,6 @@ const XPro: React.FC = () => {
     return t.category === activeTab;
   });
 
-  const isExpenseTab = activeTab === 'Xarajat';
   const mainTabs = [
     { name: 'Kassa', icon: Banknote },
     { name: 'Click', icon: CreditCard },
@@ -302,11 +301,11 @@ const XPro: React.FC = () => {
   if (!activeShift) {
     return (
       <div className="flex flex-col items-center justify-center h-[70vh] text-center px-4">
-        <div className="w-24 h-24 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hacker:bg-[#001100] hacker:border hacker:border-[#0f0] rounded-full flex items-center justify-center mb-6 animate-pulse">
+        <div className="w-24 h-24 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-full flex items-center justify-center mb-6 animate-pulse">
           <PlayCircle size={48} />
         </div>
-        <h2 className="text-3xl font-black text-slate-800 dark:text-white hacker:text-[#0f0] mb-3">Xush kelibsiz!</h2>
-        <button onClick={handleStartShift} className="px-10 py-4 bg-indigo-600 hacker:bg-[#0f0] text-white hacker:text-black font-bold rounded-2xl hover:bg-indigo-700 transition-all shadow-xl flex items-center gap-3 scale-105 active:scale-95">
+        <h2 className="text-3xl font-black text-slate-800 dark:text-white mb-3">Xush kelibsiz!</h2>
+        <button onClick={handleStartShift} className="px-10 py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 transition-all shadow-xl flex items-center gap-3">
           <PlayCircle size={24} /> Hisobotni boshlash
         </button>
       </div>
@@ -318,77 +317,16 @@ const XPro: React.FC = () => {
       {/* 1. Smena Header */}
       <div className="bg-white dark:bg-slate-900 hacker:bg-black p-4 rounded-2xl border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hacker:text-[#0f0] rounded-xl flex items-center justify-center">
-            <Clock size={20} />
-          </div>
+          <div className="w-10 h-10 bg-green-50 dark:bg-green-900/20 text-green-600 rounded-xl flex items-center justify-center"><Clock size={20} /></div>
           <div>
-            <h3 className="font-bold text-slate-800 dark:text-white hacker:text-[#0f0] text-sm hacker:font-mono">{activeShift.name}</h3>
-            <span className="text-[9px] font-bold text-green-600 dark:text-green-400 hacker:text-[#0f0] uppercase hacker:font-mono tracking-widest">Faol Smena</span>
+            <h3 className="font-bold text-slate-800 dark:text-white hacker:text-[#0f0] text-sm">{activeShift.name}</h3>
+            <span className="text-[9px] font-bold text-green-600 uppercase tracking-widest">Faol Smena</span>
           </div>
         </div>
-        <button onClick={() => closeShift(activeShift.id).then(() => window.location.reload())} className="px-5 py-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-bold rounded-xl hover:bg-red-100 transition-all flex items-center gap-2 text-xs hacker:font-mono hacker:border hacker:border-[#f00]">
-          <StopCircle size={16} /> Smenani yopish
-        </button>
+        <button onClick={() => closeShift(activeShift.id).then(() => window.location.reload())} className="px-5 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 font-bold rounded-xl text-xs">Smenani yopish</button>
       </div>
 
-      {/* 2. MAIN GLOBAL STATS (Savdo, Xarajat, Qoldiq) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Jami Savdo */}
-        <div className="bg-white dark:bg-slate-900 hacker:bg-black p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
-            <ArrowUpRight size={80} className="text-green-600" />
-          </div>
-          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-2 hacker:font-mono">Savdo (Jami)</p>
-          <div className="flex items-baseline gap-2">
-            <h3 className="text-3xl font-black text-slate-900 dark:text-white hacker:text-[#0f0] hacker:font-mono">
-              {totalIn.toLocaleString()}
-            </h3>
-            <span className="text-xs font-bold text-slate-400 uppercase">so'm</span>
-          </div>
-          <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-green-600">
-            <div className="w-6 h-6 bg-green-50 dark:bg-green-900/20 rounded-lg flex items-center justify-center"><ArrowUpRight size={14} /></div>
-            Smena boshidan kirim
-          </div>
-        </div>
-
-        {/* Jami Xarajat */}
-        <div className="bg-white dark:bg-slate-900 hacker:bg-black p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
-            <ArrowDownRight size={80} className="text-red-600" />
-          </div>
-          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-2 hacker:font-mono">Xarajat (Smena)</p>
-          <div className="flex items-baseline gap-2">
-            <h3 className="text-3xl font-black text-red-500 dark:text-red-400 hacker:text-[#f00] hacker:font-mono">
-              {totalOut.toLocaleString()}
-            </h3>
-            <span className="text-xs font-bold text-slate-400 uppercase">so'm</span>
-          </div>
-          <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-red-500">
-            <div className="w-6 h-6 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center justify-center"><ArrowDownRight size={14} /></div>
-            Barcha xarajatlar
-          </div>
-        </div>
-
-        {/* Jami Qoldiq */}
-        <div className="bg-white dark:bg-slate-900 hacker:bg-black p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
-            <Calculator size={80} className="text-orange-500" />
-          </div>
-          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-2 hacker:font-mono">Qoldiq (Jami)</p>
-          <div className="flex items-baseline gap-2">
-            <h3 className={`text-3xl font-black hacker:font-mono ${totalBalance >= 0 ? 'text-indigo-600 dark:text-indigo-400 hacker:text-[#0f0]' : 'text-orange-500'}`}>
-              {totalBalance.toLocaleString()}
-            </h3>
-            <span className="text-xs font-bold text-slate-400 uppercase">so'm</span>
-          </div>
-          <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-slate-400">
-            <div className="w-6 h-6 bg-orange-50 dark:bg-orange-900/20 text-orange-500 rounded-lg flex items-center justify-center"><Calculator size={14} /></div>
-            Kassadagi sof mablag'
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs Menu */}
+      {/* 2. Tabs Menu */}
       <div className="flex flex-wrap items-center gap-2">
         {mainTabs.map((tab) => (
           <button
@@ -405,9 +343,9 @@ const XPro: React.FC = () => {
             }}
             className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold transition-all border text-sm ${
               activeTab === tab.name 
-              ? 'bg-slate-900 dark:bg-slate-700 hacker:bg-[#003300] text-white hacker:text-[#0f0] border-slate-900 dark:border-slate-700 hacker:border-[#0f0] shadow-md' 
-              : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 hacker:text-[#0f0]/60 border-slate-100 dark:border-slate-800 hacker:border-[#0f0]/30 hover:border-slate-200'
-            } hacker:rounded-none hacker:font-mono`}
+              ? 'bg-slate-900 dark:bg-slate-700 text-white border-slate-900' 
+              : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-800 hover:border-slate-200'
+            }`}
           >
             <tab.icon size={16} />
             {tab.name}
@@ -419,117 +357,119 @@ const XPro: React.FC = () => {
         <div className="space-y-6 animate-in slide-in-from-bottom-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {expenseCategories.map(cat => (
-              <div key={cat.id} className="bg-white dark:bg-slate-900 hacker:bg-black rounded-[2.5rem] border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm overflow-hidden flex flex-col">
-                <div ref={el => exportRefs.current[cat.name] = el} className="p-6">
-                  <h4 className="font-black text-slate-800 dark:text-white hacker:text-[#0f0] text-lg hacker:font-mono">{cat.name}</h4>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Smena Hisoboti</p>
-                </div>
-                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 flex gap-2 border-t border-slate-100 dark:border-slate-800">
-                  <button onClick={() => handlePrint(cat.name)} className="flex-1 py-3 bg-white dark:bg-slate-900 hacker:bg-black border border-slate-200 dark:border-slate-700 hacker:border-[#0f0] rounded-xl flex items-center justify-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 transition-all"><Printer size={14} /> Chop etish</button>
-                  <button onClick={() => handleDownloadImage(cat.name)} disabled={isExporting} className="flex-1 py-3 bg-indigo-600 hacker:bg-[#0f0] text-white hacker:text-black rounded-xl flex items-center justify-center gap-2 text-xs font-bold hover:bg-indigo-700 transition-all">{isExporting ? <RefreshCcw size={14} className="animate-spin" /> : <ImageIcon size={14} />} Rasm</button>
-                </div>
+              <div key={cat.id} className="bg-white dark:bg-slate-900 hacker:bg-black rounded-[2rem] border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm overflow-hidden flex flex-col">
+                <div ref={el => exportRefs.current[cat.name] = el} className="p-6"><h4 className="font-black text-slate-800 dark:text-white text-lg">{cat.name}</h4><p className="text-[10px] font-bold text-slate-400 uppercase">Smena Hisoboti</p></div>
+                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 flex gap-2 border-t border-slate-100"><button onClick={() => handlePrint(cat.name)} className="flex-1 py-3 bg-white dark:bg-slate-900 border border-slate-200 rounded-xl flex items-center justify-center gap-2 text-xs font-bold text-slate-600"><Printer size={14} /> Chop etish</button><button onClick={() => handleDownloadImage(cat.name)} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl flex items-center justify-center gap-2 text-xs font-bold hover:bg-indigo-700">Rasm</button></div>
               </div>
             ))}
           </div>
         </div>
       ) : (
-        <>
+        <div className="space-y-6">
           {activeTab === 'Xarajat' && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between px-1 text-[10px] font-bold text-slate-400 hacker:text-[#0f0] uppercase tracking-widest hacker:font-mono">Kategoriyalar</div>
+              <div className="flex items-center justify-between px-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kategoriyalar</div>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2">
                 {expenseCategories.map(cat => (
-                  <div key={cat.id} className={`relative group h-12 rounded-xl border transition-all cursor-pointer flex items-center justify-center p-2 ${activeSubTab === cat.name ? 'bg-indigo-600 hacker:bg-[#002200] border-indigo-600 hacker:border-[#0f0] text-white hacker:text-[#0f0]' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 hacker:text-[#0f0]/60'} hacker:rounded-none hacker:font-mono`} onClick={() => { setActiveSubTab(cat.name); setEntryType('chiqim'); }}>
+                  <div key={cat.id} className={`relative group h-12 rounded-xl border transition-all cursor-pointer flex items-center justify-center p-2 ${activeSubTab === cat.name ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400'}`} onClick={() => { setActiveSubTab(cat.name); setEntryType('chiqim'); }}>
                     <span className="font-bold text-center break-words w-full text-[13px] leading-tight">{cat.name}</span>
-                    <div className="absolute -top-1 -right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                       <button onClick={(e) => handleEditCategoryName(e, cat.id, cat.name)} className="p-1.5 bg-white dark:bg-slate-800 text-slate-400 hover:text-indigo-600 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700"><Edit2 size={10} /></button>
-                       <button onClick={(e) => handleDeleteCategoryWithConfirmation(e, cat.id, cat.name)} className="p-1.5 bg-white dark:bg-slate-800 text-slate-400 hover:text-red-500 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700"><X size={10} /></button>
+                    
+                    {/* Buttons - ALWAYS VISIBLE or visible on hover with background */}
+                    <div className="absolute -top-1.5 -right-1.5 flex gap-1 bg-white dark:bg-slate-800 p-0.5 rounded-lg shadow-md border border-slate-100 dark:border-slate-700">
+                       <button onClick={(e) => handleEditCategoryName(e, cat.id, cat.name)} className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-md"><Edit2 size={10} /></button>
+                       <button onClick={(e) => handleDeleteCategoryWithConfirmation(e, cat.id, cat.name)} className="p-1.5 text-slate-400 hover:text-red-500 rounded-md"><X size={10} /></button>
                     </div>
                   </div>
                 ))}
-                <button onClick={handleAddCategory} className="h-12 rounded-xl border-2 border-dashed border-indigo-200 dark:border-slate-800 hacker:border-[#0f0] flex items-center justify-center gap-2 text-indigo-500 hacker:text-[#0f0] hover:bg-indigo-50 dark:hover:bg-slate-800 transition-all hacker:rounded-none"><Plus size={20} /><span className="font-bold text-[12px] hacker:font-mono">Qo'shish</span></button>
+                <button onClick={handleAddCategory} className="h-12 rounded-xl border-2 border-dashed border-indigo-200 dark:border-slate-800 flex items-center justify-center gap-2 text-indigo-500 hover:bg-indigo-50 transition-all"><Plus size={20} /><span className="font-bold text-[12px]">Qo'shish</span></button>
               </div>
             </div>
           )}
 
-          {/* Form Section */}
+          {/* 3. Form Section */}
           <div className="max-w-3xl mx-auto w-full">
-            <div className={`bg-white dark:bg-slate-900 hacker:bg-black rounded-[2.5rem] p-6 md:p-8 border transition-all duration-300 shadow-sm ${entryType === 'kirim' ? 'border-green-400 ring-2 ring-green-50 dark:ring-green-900/10' : 'border-slate-100 dark:border-slate-800'}`}>
+            <div className={`bg-white dark:bg-slate-900 hacker:bg-black rounded-[2.5rem] p-6 md:p-8 border transition-all duration-300 shadow-sm ${entryType === 'kirim' ? 'border-green-400 ring-2 ring-green-50' : 'border-slate-100 dark:border-slate-800'}`}>
               <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <h3 className={`font-black text-xl flex items-center gap-2 capitalize hacker:font-mono ${entryType === 'kirim' ? 'text-green-600' : 'text-slate-800 dark:text-white'}`}>
-                    {entryType === 'kirim' ? 'Savdo' : 'Xarajat'} 
-                    {activeSubTab && <span className="text-slate-400 text-sm">({activeSubTab})</span>}
-                  </h3>
-                  {entryType === 'kirim' && <span className="px-2 py-0.5 bg-green-50 dark:bg-green-900/20 text-green-600 rounded text-[10px] font-black uppercase tracking-widest animate-pulse">Savdo rejimi</span>}
-                </div>
+                <h3 className={`font-black text-xl flex items-center gap-2 capitalize ${entryType === 'kirim' ? 'text-green-600' : 'text-slate-800 dark:text-white'}`}>
+                  {entryType === 'kirim' ? 'Savdo' : 'Xarajat'} 
+                  {activeSubTab && <span className="text-slate-400 text-sm">({activeSubTab})</span>}
+                </h3>
               </div>
               <form onSubmit={handleSave} className="space-y-5">
                 <div className="relative">
-                  <input ref={amountInputRef} type="text" required inputMode="numeric" value={formData.amount} onChange={handleAmountChange} placeholder="0" disabled={isSaving} className={`w-full pl-6 pr-16 py-5 bg-slate-50 dark:bg-slate-950 border rounded-2xl outline-none font-black text-3xl dark:text-white hacker:bg-black hacker:text-[#0f0] transition-all ${entryType === 'kirim' ? 'border-green-200 focus:border-green-500' : 'border-slate-100 dark:border-slate-800 focus:border-indigo-500'}`} />
-                  <span className="absolute right-6 top-1/2 -translate-y-1/2 font-bold text-slate-300 dark:text-slate-600 text-sm">so'm</span>
+                  <input ref={amountInputRef} type="text" required inputMode="numeric" value={formData.amount} onChange={handleAmountChange} placeholder="0" className={`w-full pl-6 pr-16 py-5 bg-slate-50 dark:bg-slate-950 border rounded-2xl outline-none font-black text-3xl dark:text-white hacker:bg-black transition-all ${entryType === 'kirim' ? 'border-green-200 focus:border-green-500' : 'border-slate-100 focus:border-indigo-500'}`} />
+                  <span className="absolute right-6 top-1/2 -translate-y-1/2 font-bold text-slate-300 text-sm">so'm</span>
                 </div>
-                <textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} rows={2} disabled={isSaving} placeholder="Izoh (masalan: Mijoz ismi yoki tovar turi)..." className={`w-full px-6 py-4 bg-slate-50 dark:bg-slate-950 border rounded-2xl outline-none transition-all resize-none font-medium text-sm dark:text-white hacker:bg-black hacker:text-[#0f0] ${entryType === 'kirim' ? 'border-green-200 focus:border-green-500' : 'border-slate-100 dark:border-slate-800 focus:border-indigo-500'}`} />
-                <button type="submit" disabled={isSaving} className={`w-full py-5 text-white hacker:text-black font-black rounded-2xl transition-all shadow-xl flex items-center justify-center gap-3 text-base ${entryType === 'kirim' ? 'bg-green-600 hover:bg-green-700 shadow-green-100 dark:shadow-none' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100 dark:shadow-none'}`}>
-                  {isSaving ? <RefreshCcw className="animate-spin" size={24} /> : <Save size={24} />}
-                  {isSaving ? "Saqlanmoqda..." : entryType === 'kirim' ? "Savdoni saqlash" : "Xarajatni saqlash"}
+                <textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} rows={2} placeholder="Izoh (ixtiyoriy)..." className={`w-full px-6 py-4 bg-slate-50 dark:bg-slate-950 border rounded-2xl outline-none transition-all resize-none font-medium text-sm dark:text-white hacker:bg-black ${entryType === 'kirim' ? 'border-green-200 focus:border-green-500' : 'border-slate-100 focus:border-indigo-500'}`} />
+                <button type="submit" disabled={isSaving} className={`w-full py-5 text-white font-black rounded-2xl transition-all shadow-xl flex items-center justify-center gap-3 text-base ${entryType === 'kirim' ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
+                  {isSaving ? <RefreshCcw className="animate-spin" size={24} /> : <Save size={24} />} {isSaving ? "Saqlanmoqda..." : "Saqlash"}
                 </button>
               </form>
             </div>
           </div>
 
-          {/* Recent Transactions List */}
-          <div className="space-y-4 mt-10">
+          {/* 4. MAIN GLOBAL STATS (Exactly where you pointed in image 2) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+            <div className="bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between group">
+              <div>
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Savdo (Jami)</p>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white">{totalIn.toLocaleString()} <span className="text-[10px] text-slate-400">so'm</span></h3>
+              </div>
+              <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-xl flex items-center justify-center"><ArrowUpRight size={20} /></div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between group">
+              <div>
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Umumiy Xarajat</p>
+                <h3 className="text-xl font-black text-red-500">{totalOut.toLocaleString()} <span className="text-[10px] text-slate-400">so'm</span></h3>
+              </div>
+              <div className="w-10 h-10 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-xl flex items-center justify-center"><ArrowDownRight size={20} /></div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between group">
+              <div>
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Qolgan Pul</p>
+                <h3 className={`text-xl font-black ${totalBalance >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-orange-500'}`}>{totalBalance.toLocaleString()} <span className="text-[10px] text-slate-400">so'm</span></h3>
+              </div>
+              <div className="w-10 h-10 bg-orange-50 dark:bg-orange-900/20 text-orange-500 rounded-xl flex items-center justify-center"><Calculator size={20} /></div>
+            </div>
+          </div>
+
+          {/* 5. Recent Transactions List */}
+          <div className="space-y-4 mt-8">
             <div className="flex items-center justify-between px-2">
-              <h3 className="font-bold text-slate-800 dark:text-white hacker:text-[#0f0] text-sm uppercase tracking-widest hacker:font-mono">So'nggi operatsiyalar</h3>
+              <h3 className="font-bold text-slate-800 dark:text-white text-sm uppercase tracking-widest">So'nggi operatsiyalar</h3>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{filteredTransactions.length} ta amal</span>
             </div>
             <div className="space-y-2.5">
               {filteredTransactions.length > 0 ? (
                 filteredTransactions.map((t) => (
-                  <div key={t.id} className="bg-white dark:bg-slate-900 hacker:bg-black p-4 rounded-2xl border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm group transition-all">
+                  <div key={t.id} className="bg-white dark:bg-slate-900 hacker:bg-black p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm group transition-all">
                     {editingId === t.id ? (
                       <div className="space-y-3 animate-in fade-in duration-200">
-                        <div className="grid grid-cols-2 gap-2">
-                          <input type="text" value={editData.amount} onChange={handleEditAmountChange} className="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 rounded-lg outline-none font-bold text-sm dark:text-white" />
-                          <input type="text" value={editData.description} onChange={(e) => setEditData({...editData, description: e.target.value})} className="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 rounded-lg outline-none font-medium text-sm dark:text-white" />
-                        </div>
-                        <div className="flex justify-end gap-2">
-                          <button onClick={cancelEdit} className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg"><X size={18} /></button>
-                          <button onClick={() => saveEdit(t.id)} className="p-2 text-white bg-green-500 rounded-lg"><Check size={18} /></button>
-                        </div>
+                        <div className="grid grid-cols-2 gap-2"><input type="text" value={editData.amount} onChange={handleEditAmountChange} className="w-full p-2.5 bg-slate-50 border rounded-lg outline-none font-bold text-sm" /><input type="text" value={editData.description} onChange={(e) => setEditData({...editData, description: e.target.value})} className="w-full p-2.5 bg-slate-50 border rounded-lg outline-none font-medium text-sm" /></div>
+                        <div className="flex justify-end gap-2"><button onClick={cancelEdit} className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg"><X size={18} /></button><button onClick={() => saveEdit(t.id)} className="p-2 text-white bg-green-500 rounded-lg"><Check size={18} /></button></div>
                       </div>
                     ) : (
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${t.type === 'kirim' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'}`}>{t.type === 'kirim' ? <Plus size={20} /> : <TrendingDown size={20} />}</div>
-                          <div>
-                            <p className="font-bold text-slate-800 dark:text-white hacker:text-[#0f0] text-sm leading-tight">{t.description}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[10px] font-bold text-slate-400 hacker:text-[#0f0]/60">{new Date(t.date).toLocaleTimeString('uz-UZ', {hour: '2-digit', minute:'2-digit'})}</span>
-                              {t.sub_category && <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 rounded-md text-[9px] font-black uppercase tracking-wider">{t.sub_category}</span>}
-                            </div>
-                          </div>
+                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${t.type === 'kirim' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{t.type === 'kirim' ? <Plus size={20} /> : <TrendingDown size={20} />}</div>
+                          <div><p className="font-bold text-slate-800 dark:text-white text-sm leading-tight">{t.description}</p><div className="flex items-center gap-2 mt-1"><span className="text-[10px] font-bold text-slate-400">{new Date(t.date).toLocaleTimeString('uz-UZ', {hour: '2-digit', minute:'2-digit'})}</span>{t.sub_category && <span className="px-2 py-0.5 bg-indigo-50 text-indigo-500 rounded text-[9px] font-black uppercase">{t.sub_category}</span>}</div></div>
                         </div>
                         <div className="flex items-center gap-4">
-                          <p className={`font-black text-sm md:text-base ${t.type === 'kirim' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>{t.type === 'kirim' ? '+' : '-'}{t.amount.toLocaleString()}</p>
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                            <button onClick={() => startEdit(t)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl"><Edit2 size={16} /></button>
-                            <button onClick={() => handleDelete(t.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl"><Trash2 size={16} /></button>
-                          </div>
+                          <p className={`font-black text-sm md:text-base ${t.type === 'kirim' ? 'text-green-600' : 'text-red-500'}`}>{t.type === 'kirim' ? '+' : '-'}{t.amount.toLocaleString()}</p>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all"><button onClick={() => startEdit(t)} className="p-2 text-slate-400 hover:text-indigo-600"><Edit2 size={16} /></button><button onClick={() => handleDelete(t.id)} className="p-2 text-slate-400 hover:text-red-500"><Trash2 size={16} /></button></div>
                         </div>
                       </div>
                     )}
                   </div>
                 ))
               ) : (
-                <div className="bg-white dark:bg-slate-900 hacker:bg-black rounded-[2rem] p-16 text-center border border-dashed border-slate-200 dark:border-slate-800">
-                  <p className="text-slate-400 font-bold italic text-sm">Ushbu bo'limda hali amallar mavjud emas</p>
-                </div>
+                <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-16 text-center border border-dashed border-slate-200"><p className="text-slate-400 font-bold italic text-sm">Hali amallar mavjud emas</p></div>
               )}
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
