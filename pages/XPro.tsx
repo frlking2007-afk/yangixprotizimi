@@ -17,7 +17,7 @@ import {
   saveTransaction
 } from '../services/supabase.ts';
 
-const StatCard = ({ label, val, icon, color }: { label: string, val: number, icon: React.ReactNode, color: 'green' | 'red' | 'indigo' }) => {
+const StatCard = ({ label, val, icon, color, onClick }: { label: string, val: number, icon: React.ReactNode, color: 'green' | 'red' | 'indigo', onClick?: () => void }) => {
   const colorClasses = {
     green: "bg-green-50 text-green-600",
     red: "bg-red-50 text-red-600",
@@ -25,7 +25,10 @@ const StatCard = ({ label, val, icon, color }: { label: string, val: number, ico
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 hacker:bg-black p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between">
+    <div 
+      onClick={onClick}
+      className={`bg-white dark:bg-slate-900 hacker:bg-black p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between transition-all ${onClick ? 'cursor-pointer hover:border-indigo-300 active:scale-95' : ''}`}
+    >
       <div>
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
         <h3 className={`text-2xl font-black ${color === 'red' ? 'text-red-500' : 'text-slate-900 dark:text-white hacker:text-[#0f0]'}`}>
@@ -45,12 +48,14 @@ const XPro: React.FC = () => {
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  // Add missing state for exporting images
   const [isExporting, setIsExporting] = useState(false);
   
   const [activeTab, setActiveTab] = useState<string>('Kassa');
   const [activeSubTab, setActiveSubTab] = useState<string | null>(null);
   
+  // Kassa manual sum state
+  const [manualKassaSum, setManualKassaSum] = useState<number>(0);
+
   // New Transaction Form State
   const [amountInput, setAmountInput] = useState('');
   const [descInput, setDescInput] = useState('');
@@ -75,6 +80,10 @@ const XPro: React.FC = () => {
       if (shift) {
         const trans = await getTransactionsByShift(shift.id);
         setTransactions(trans || []);
+        
+        // Restore manual kassa sum from localStorage for this shift
+        const savedSum = localStorage.getItem(`kassa_sum_${shift.id}`);
+        if (savedSum) setManualKassaSum(parseFloat(savedSum));
       }
 
       if (activeTab === 'Xarajat' && !activeSubTab && categories && categories.length > 0) {
@@ -102,6 +111,23 @@ const XPro: React.FC = () => {
 
   const handleEditAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEditData({ ...editData, amount: formatAmount(e.target.value) });
+  };
+
+  const handleKassaSumClick = () => {
+    const input = prompt("Kassa summasini kiriting:", manualKassaSum.toString());
+    if (input === null) return;
+    
+    const cleanValue = input.replace(/\s/g, '');
+    const num = parseFloat(cleanValue);
+    
+    if (!isNaN(num)) {
+      setManualKassaSum(num);
+      if (activeShift) {
+        localStorage.setItem(`kassa_sum_${activeShift.id}`, num.toString());
+      }
+    } else {
+      alert("Iltimos, faqat raqam kiriting.");
+    }
   };
 
   const handleSaveTransaction = async () => {
@@ -145,7 +171,10 @@ const XPro: React.FC = () => {
   const handleStartShift = async () => {
     try {
       const shift = await startNewShift();
-      if (shift) setActiveShift(shift);
+      if (shift) {
+        setActiveShift(shift);
+        setManualKassaSum(0); // Reset for new shift
+      }
     } catch (err: any) {
       alert("Smena ochishda xatolik: " + (err.message || "Noma'lum"));
     }
@@ -294,9 +323,13 @@ const XPro: React.FC = () => {
     } catch (err) { alert('Xatolik yuz berdi.'); } finally { setIsExporting(false); }
   };
 
-  const totalIn = transactions.filter(t => t.type === 'kirim').reduce((acc, curr) => acc + (curr.amount || 0), 0);
-  const totalOut = transactions.filter(t => t.type === 'chiqim').reduce((acc, curr) => acc + (curr.amount || 0), 0);
-  const totalBalance = totalIn - totalOut;
+  // 2-kartochka: Click, Uzcard, Humo va Xarajat dagi umumiy summa
+  const totalExpensesAcrossTypes = transactions
+    .filter(t => ['Click', 'Uzcard', 'Humo', 'Xarajat'].includes(t.category))
+    .reduce((acc, curr) => acc + (curr.amount || 0), 0);
+  
+  // 3-kartochka: Kassa - (Click + Uzcard + Humo + Xarajat)
+  const totalBalance = manualKassaSum - totalExpensesAcrossTypes;
 
   const filteredTransactions = transactions.filter(t => {
     if (activeTab === 'Xarajat') return t.category === 'Xarajat' && (activeSubTab ? t.sub_category === activeSubTab : true);
@@ -376,49 +409,70 @@ const XPro: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <StatCard label="Savdo (Jami)" val={totalIn} icon={<ArrowUpRight />} color="green" />
-            <StatCard label="Umumiy Xarajat" val={totalOut} icon={<ArrowDownRight />} color="red" />
-            <StatCard label="Qolgan Pul" val={totalBalance} icon={<Calculator />} color="indigo" />
-          </div>
+          {/* Statistika kartochkalari - Faqat Kassa bo'limida ko'rinadi */}
+          {activeTab === 'Kassa' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <StatCard 
+                label="Kassa Summasi (O'zgartirish uchun bosing)" 
+                val={manualKassaSum} 
+                icon={<ArrowUpRight />} 
+                color="green" 
+                onClick={handleKassaSumClick}
+              />
+              <StatCard 
+                label="Umumiy Xarajat (Click+Uzcard+Humo+Xarajat)" 
+                val={totalExpensesAcrossTypes} 
+                icon={<ArrowDownRight />} 
+                color="red" 
+              />
+              <StatCard 
+                label="Qolgan Pul (Balans)" 
+                val={totalBalance} 
+                icon={<Calculator />} 
+                color="indigo" 
+              />
+            </div>
+          )}
 
-          {/* New Transaction Form */}
-          <div className="bg-white dark:bg-slate-900 hacker:bg-black p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
-             <div className="flex items-center gap-2 mb-2">
-                <Plus size={18} className="text-indigo-600" />
-                <h4 className="font-bold text-sm uppercase tracking-widest text-slate-800 dark:text-white hacker:text-[#0f0]">Yangi operatsiya ({activeTab})</h4>
-             </div>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Summa</label>
-                   <input 
-                    type="text" 
-                    value={amountInput}
-                    onChange={handleAmountChange}
-                    placeholder="0"
-                    className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl outline-none font-black text-lg dark:text-white hacker:text-[#0f0]"
-                   />
-                </div>
-                <div>
-                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Tavsif (Ixtiyoriy)</label>
-                   <input 
-                    type="text" 
-                    value={descInput}
-                    onChange={(e) => setDescInput(e.target.value)}
-                    placeholder="Operatsiya haqida..."
-                    className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl outline-none font-medium dark:text-white hacker:text-[#0f0]"
-                   />
-                </div>
-             </div>
-             <button 
-               onClick={handleSaveTransaction}
-               disabled={isSaving}
-               className="w-full py-4 bg-slate-900 dark:bg-indigo-600 text-white font-black rounded-2xl flex items-center justify-center gap-3 hover:bg-black transition-all shadow-lg active:scale-[0.98] disabled:opacity-50"
-             >
-                {isSaving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
-                Saqlash
-             </button>
-          </div>
+          {/* New Transaction Form - Hidden for Kassa tab */}
+          {activeTab !== 'Kassa' && (
+            <div className="bg-white dark:bg-slate-900 hacker:bg-black p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
+               <div className="flex items-center gap-2 mb-2">
+                  <Plus size={18} className="text-indigo-600" />
+                  <h4 className="font-bold text-sm uppercase tracking-widest text-slate-800 dark:text-white hacker:text-[#0f0]">Yangi operatsiya ({activeTab})</h4>
+               </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Summa</label>
+                     <input 
+                      type="text" 
+                      value={amountInput}
+                      onChange={handleAmountChange}
+                      placeholder="0"
+                      className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl outline-none font-black text-lg dark:text-white hacker:text-[#0f0]"
+                     />
+                  </div>
+                  <div>
+                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Tavsif (Ixtiyoriy)</label>
+                     <input 
+                      type="text" 
+                      value={descInput}
+                      onChange={(e) => setDescInput(e.target.value)}
+                      placeholder="Operatsiya haqida..."
+                      className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl outline-none font-medium dark:text-white hacker:text-[#0f0]"
+                     />
+                  </div>
+               </div>
+               <button 
+                 onClick={handleSaveTransaction}
+                 disabled={isSaving}
+                 className="w-full py-4 bg-slate-900 dark:bg-indigo-600 text-white font-black rounded-2xl flex items-center justify-center gap-3 hover:bg-black transition-all shadow-lg active:scale-[0.98] disabled:opacity-50"
+               >
+                  {isSaving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+                  Saqlash
+               </button>
+            </div>
+          )}
 
           {activeTab === 'Xarajat' && (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
