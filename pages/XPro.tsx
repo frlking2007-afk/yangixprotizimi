@@ -109,7 +109,7 @@ const XPro: React.FC = () => {
         description: formDescription.trim() || (activeTab === 'Xarajat' ? 'Xarajat' : activeTab),
         category: activeTab,
         type: activeTab === 'Xarajat' ? 'chiqim' as const : 'kirim' as const,
-        sub_category: activeTab === 'Xarajat' && activeSubTab ? activeSubTab : undefined
+        sub_category: activeTab === 'Xarajat' && activeSubTab ? activeSubTab : (activeTab === 'Xarajat' && expenseCategories.length > 0 ? expenseCategories[0].name : undefined)
       };
 
       await saveTransaction(transactionData);
@@ -683,12 +683,12 @@ const XPro: React.FC = () => {
                   type="text"
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
-                  placeholder="Izoh (ixtiyoriy)..."
+                  placeholder="Tavsif (ixtiyoriy)..."
                   className="w-full p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-sm text-slate-700 dark:text-slate-300 focus:border-red-500 focus:ring-2 focus:ring-red-200 dark:focus:ring-red-900"
                 />
                 <button
                   onClick={handleSubmitTransaction}
-                  disabled={isSubmitting || !formAmount || !activeSubTab}
+                  disabled={isSubmitting || !formAmount}
                   className="w-full py-4 bg-red-600 hover:bg-red-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg"
                 >
                   {isSubmitting ? (
@@ -703,9 +703,6 @@ const XPro: React.FC = () => {
                     </>
                   )}
                 </button>
-                {!activeSubTab && (
-                  <p className="text-xs text-red-500 text-center">Iltimos, avval kategoriyani tanlang</p>
-                )}
               </div>
             </div>
           )}
