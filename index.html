@@ -61,12 +61,14 @@
         .hacker .text-indigo-600 { color: #00ff00 !important; }
         .hacker .text-indigo-700 { color: #00ff00 !important; }
 
-        /* Animation for Matrix feel */
-        @keyframes matrix-fade {
-          0% { opacity: 0; }
-          50% { opacity: 1; }
-          100% { opacity: 0; }
+        /* Print styles */
+        @media print {
+          .no-print { display: none !important; }
+          .print-only { display: block !important; }
+          body { background: white !important; color: black !important; }
+          .bg-white { border: 1px solid #eee !important; }
         }
+        .print-only { display: none; }
     </style>
     <script>
       // Apply theme on load
@@ -84,7 +86,8 @@
     "recharts": "https://esm.sh/recharts@^3.6.0",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "@google/genai": "https://esm.sh/@google/genai@^1.38.0",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.45.4"
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.45.4",
+    "html-to-image": "https://esm.sh/html-to-image@^1.11.11"
   }
 }
 </script>

@@ -7,6 +7,25 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// SETTINGS (Password Management)
+export const getDeletionPassword = async (): Promise<string> => {
+  const { data, error } = await supabase
+    .from('settings')
+    .select('value')
+    .eq('key', 'deletion_password')
+    .single();
+  
+  if (error || !data) return '1234'; // Default password if not found
+  return data.value;
+};
+
+export const setDeletionPassword = async (newPassword: string): Promise<void> => {
+  const { error } = await supabase
+    .from('settings')
+    .upsert({ key: 'deletion_password', value: newPassword });
+  if (error) throw error;
+};
+
 // EXPENSE CATEGORIES
 export const getExpenseCategories = async (): Promise<ExpenseCategory[]> => {
   try {
@@ -14,7 +33,7 @@ export const getExpenseCategories = async (): Promise<ExpenseCategory[]> => {
     if (error) throw error;
     return data || [];
   } catch (err) {
-    console.error("Categories error:", err);
+    console.error("Categories fetch error:", err);
     return [];
   }
 };
@@ -74,8 +93,12 @@ export const closeShift = async (shiftId: string): Promise<void> => {
 };
 
 export const getAllShifts = async (): Promise<Shift[]> => {
-  const { data } = await supabase.from('shifts').select('*').order('start_date', { ascending: false });
-  return data || [];
+  try {
+    const { data } = await supabase.from('shifts').select('*').order('start_date', { ascending: false });
+    return data || [];
+  } catch {
+    return [];
+  }
 };
 
 // TRANSACTION FUNCTIONS
@@ -93,22 +116,35 @@ export const getTransactionsByShift = async (shiftId: string): Promise<Transacti
 };
 
 export const saveTransaction = async (transaction: Omit<Transaction, 'id' | 'date'>): Promise<Transaction | null> => {
-  // Obyektda shift_id borligini tekshiramiz
   if (!transaction.shift_id) {
-    throw new Error("Smena ID topilmadi. Iltimos, smenani qayta tekshiring.");
+    throw new Error("Smena aniqlanmadi.");
   }
+
+  const cleanTransaction = {
+    shift_id: transaction.shift_id,
+    amount: transaction.amount,
+    category: transaction.category,
+    description: transaction.description || "",
+    type: transaction.type,
+    sub_category: transaction.sub_category || null
+  };
 
   const { data, error } = await supabase
     .from('transactions')
-    .insert([transaction])
+    .insert([cleanTransaction])
     .select()
     .single();
 
-  if (error) {
-    console.error("Supabase insert error details:", error);
-    throw new Error(error.message || "Ma'lumotni saqlashda bazadan xatolik keldi.");
-  }
+  if (error) throw error;
   return data as Transaction;
+};
+
+export const updateTransaction = async (id: string, updates: Partial<Transaction>): Promise<void> => {
+  const { error } = await supabase
+    .from('transactions')
+    .update(updates)
+    .eq('id', id);
+  if (error) throw error;
 };
 
 export const deleteTransaction = async (id: string): Promise<void> => {
