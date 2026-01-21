@@ -40,6 +40,9 @@ const XPro: React.FC = () => {
   // Modal state for Savdo card
   const [showSavdoModal, setShowSavdoModal] = useState(false);
   const [savdoAmount, setSavdoAmount] = useState('');
+  
+  // Modal state for Umumiy Xarajat card
+  const [showXarajatModal, setShowXarajatModal] = useState(false);
 
   // Refs
   const exportRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -521,7 +524,10 @@ const XPro: React.FC = () => {
                 <div className="w-12 h-12 bg-green-50 dark:bg-green-900/20 text-green-600 rounded-2xl flex items-center justify-center"><ArrowUpRight size={24} /></div>
               </div>
 
-              <div className="bg-white dark:bg-slate-900 hacker:bg-black p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between group">
+              <div 
+                onClick={handleXarajatCardClick}
+                className="bg-white dark:bg-slate-900 hacker:bg-black p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between group cursor-pointer hover:shadow-lg transition-all"
+              >
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Umumiy Xarajat</p>
                   <div className="flex items-baseline gap-1">
@@ -805,6 +811,39 @@ const XPro: React.FC = () => {
                   </>
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Umumiy Xarajat Modal */}
+      {showXarajatModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowXarajatModal(false)}>
+          <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-6 max-w-md w-full mx-4 border border-slate-200 dark:border-slate-700 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white">Umumiy Xarajat - Batafsil</h3>
+              <button onClick={() => setShowXarajatModal(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Xarajat summasi</p>
+                <p className="text-2xl font-bold text-red-500">{xarajatSumma.toLocaleString()} so'm</p>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Click summasi</p>
+                <p className="text-2xl font-bold text-blue-500">{clickSumma.toLocaleString()} so'm</p>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Terminal umumiy summasi</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">(Uzcard + Humo)</p>
+                <p className="text-2xl font-bold text-indigo-500">{terminalUmumiySumma.toLocaleString()} so'm</p>
+                <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                  <p>Uzcard: {uzcardSumma.toLocaleString()} so'm</p>
+                  <p>Humo: {humoSumma.toLocaleString()} so'm</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
