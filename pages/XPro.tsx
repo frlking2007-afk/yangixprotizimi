@@ -350,10 +350,11 @@ const XPro: React.FC = () => {
   const totalOut = transactions.filter(t => t.type === 'chiqim').reduce((acc, curr) => acc + curr.amount, 0);
   const totalBalance = totalIn - totalOut;
   
-  // Faqat "Savdo" kartasiga kiritilgan summalar (Kassa kategoryasidagi "Savdo" description'li xarajatlar)
-  const savdoTotal = transactions
+  // Faqat eng so'nggi "Savdo" transaksiyasi (Kassa kategoryasidagi "Savdo" description'li xarajat)
+  const savdoTransactions = transactions
     .filter(t => t.category === 'Kassa' && t.type === 'chiqim' && t.description === 'Savdo')
-    .reduce((acc, curr) => acc + curr.amount, 0);
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const savdoTotal = savdoTransactions.length > 0 ? savdoTransactions[0].amount : 0;
   
   // Handle Savdo card click
   const handleSavdoCardClick = () => {
