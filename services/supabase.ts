@@ -9,9 +9,14 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // EXPENSE CATEGORIES
 export const getExpenseCategories = async (): Promise<ExpenseCategory[]> => {
-  const { data, error } = await supabase.from('expense_categories').select('*').order('created_at', { ascending: true });
-  if (error) return [];
-  return data;
+  try {
+    const { data, error } = await supabase.from('expense_categories').select('*').order('created_at', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error("Categories error:", err);
+    return [];
+  }
 };
 
 export const createExpenseCategory = async (name: string): Promise<ExpenseCategory | null> => {
@@ -75,23 +80,33 @@ export const getAllShifts = async (): Promise<Shift[]> => {
 
 // TRANSACTION FUNCTIONS
 export const getTransactionsByShift = async (shiftId: string): Promise<Transaction[]> => {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('transactions')
     .select('*')
     .eq('shift_id', shiftId)
     .order('date', { ascending: false });
+  if (error) {
+    console.error("Transactions fetch error:", error);
+    return [];
+  }
   return data || [];
 };
 
 export const saveTransaction = async (transaction: Omit<Transaction, 'id' | 'date'>): Promise<Transaction | null> => {
+  // Obyektda shift_id borligini tekshiramiz
+  if (!transaction.shift_id) {
+    throw new Error("Smena ID topilmadi. Iltimos, smenani qayta tekshiring.");
+  }
+
   const { data, error } = await supabase
     .from('transactions')
     .insert([transaction])
     .select()
     .single();
+
   if (error) {
-    console.error("Supabase insert error:", error);
-    throw error;
+    console.error("Supabase insert error details:", error);
+    throw new Error(error.message || "Ma'lumotni saqlashda bazadan xatolik keldi.");
   }
   return data as Transaction;
 };
