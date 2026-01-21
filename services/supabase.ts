@@ -89,12 +89,16 @@ export const saveTransaction = async (transaction: Omit<Transaction, 'id' | 'dat
     .insert([transaction])
     .select()
     .single();
-  if (error) throw error;
+  if (error) {
+    console.error("Supabase insert error:", error);
+    throw error;
+  }
   return data as Transaction;
 };
 
 export const deleteTransaction = async (id: string): Promise<void> => {
-  await supabase.from('transactions').delete().eq('id', id);
+  const { error } = await supabase.from('transactions').delete().eq('id', id);
+  if (error) throw error;
 };
 
 export const getTransactions = async (): Promise<Transaction[]> => {

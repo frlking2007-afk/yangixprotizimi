@@ -18,26 +18,26 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   ];
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950 hacker:bg-black transition-colors duration-300">
       {/* Mobile Sidebar Toggle */}
       <button 
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className="lg:hidden fixed top-4 right-4 z-50 p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-200"
+        className="lg:hidden fixed top-4 right-4 z-50 p-2 text-slate-600 dark:text-slate-400 hacker:text-[#0f0] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all duration-200"
       >
         {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
       {/* Sidebar */}
       <aside className={`
-        fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 transform transition-transform duration-300 ease-in-out
+        fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white dark:bg-slate-900 hacker:bg-black border-r border-slate-200 dark:border-slate-800 hacker:border-[#0f0] transform transition-transform duration-300 ease-in-out
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="h-full flex flex-col">
           <div className="p-6 flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
+            <div className="w-10 h-10 bg-indigo-600 hacker:bg-[#0f0] rounded-xl flex items-center justify-center text-white hacker:text-black">
               <Wallet size={24} />
             </div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-800">Xpro</h1>
+            <h1 className="text-xl font-bold tracking-tight text-slate-800 dark:text-white hacker:text-[#0f0] hacker:font-mono uppercase">Xpro</h1>
           </div>
 
           <nav className="flex-1 px-4 py-4 space-y-1">
@@ -51,35 +51,26 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                 className={`
                   w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all
                   ${activeTab === item.id 
-                    ? 'bg-indigo-50 text-indigo-700' 
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}
+                    ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 hacker:bg-[#002200] hacker:text-[#0f0] hacker:border hacker:border-[#0f0]' 
+                    : 'text-slate-500 dark:text-slate-400 hacker:text-[#0f0]/60 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-white'}
                 `}
               >
                 <item.icon size={20} />
-                {item.label}
+                <span className="hacker:font-mono">{item.label}</span>
               </button>
             ))}
           </nav>
-
-          <div className="p-6 border-t border-slate-100">
-            <div className="bg-indigo-600 rounded-2xl p-4 text-white">
-              <p className="text-xs font-medium text-indigo-100 mb-1">Premium</p>
-              <h3 className="text-sm font-bold mb-3">Professional reja</h3>
-              <button className="w-full py-2 bg-white text-indigo-600 text-xs font-bold rounded-lg hover:bg-indigo-50 transition-colors">
-                Yangilash
-              </button>
-            </div>
-          </div>
         </div>
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8">
-          <h2 className="text-lg font-semibold text-slate-700 capitalize">
+        <header className="h-16 bg-white dark:bg-slate-900 hacker:bg-black border-b border-slate-200 dark:border-slate-800 hacker:border-[#0f0] flex items-center justify-between px-8">
+          <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200 hacker:text-[#0f0] capitalize hacker:font-mono">
             {activeTab === 'xpro' ? 'Dashboard' : activeTab === 'sozlama' ? 'Sozlamalar' : activeTab}
           </h2>
           <div className="flex items-center gap-4">
+            {/* Header info could go here */}
           </div>
         </header>
 
