@@ -483,8 +483,8 @@ const XPro: React.FC = () => {
             </div>
           </div>
 
-          {/* TRANSACTION FORM - For Kassa, Click, Uzcard, Humo tabs */}
-          {['Kassa', 'Click', 'Uzcard', 'Humo'].includes(activeTab) && (
+          {/* TRANSACTION FORM - For Kassa tab only */}
+          {activeTab === 'Kassa' && (
             <div className="bg-white dark:bg-slate-900 hacker:bg-black rounded-[2rem] border-2 border-green-200 dark:border-green-900/30 shadow-lg p-6">
               <h3 className="text-green-600 dark:text-green-400 font-bold text-lg mb-4">Savdo</h3>
               <div className="space-y-4">
