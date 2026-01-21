@@ -12,7 +12,8 @@ import { Transaction, TransactionType, Shift, ExpenseCategory } from '../types';
 import { 
   getActiveShift, startNewShift, closeShift, 
   getTransactionsByShift, saveTransaction, deleteTransaction,
-  getExpenseCategories, updateTransaction, getDeletionPassword
+  getExpenseCategories, updateTransaction, getDeletionPassword,
+  createExpenseCategory
 } from '../services/supabase';
 
 const XPro: React.FC = () => {
@@ -98,6 +99,21 @@ const XPro: React.FC = () => {
       if (shift) setActiveShift(shift);
     } catch (err: any) {
       alert("Smena ochishda xatolik: " + (err.message || "Noma'lum"));
+    }
+  };
+
+  const handleAddCategory = async () => {
+    const name = prompt("Yangi xarajat kategoriyasi nomini kiriting (masalan: Go'sht):");
+    if (!name || name.trim() === '') return;
+
+    try {
+      const newCat = await createExpenseCategory(name.trim());
+      if (newCat) {
+        setExpenseCategories([...expenseCategories, newCat]);
+        setActiveSubTab(newCat.name);
+      }
+    } catch (err: any) {
+      alert("Kategoriya qo'shishda xato: " + err.message);
     }
   };
 
@@ -261,18 +277,7 @@ const XPro: React.FC = () => {
     return t.category === activeTab;
   });
 
-  // Global Shift Stats
-  const globalSales = transactions
-    .filter(t => t.type === 'kirim')
-    .reduce((acc, curr) => acc + curr.amount, 0);
-
-  const globalExpenses = transactions
-    .filter(t => t.type === 'chiqim')
-    .reduce((acc, curr) => acc + curr.amount, 0);
-
-  const globalBalance = globalSales - globalExpenses;
-
-  // Local Stats
+  // Local Stats (Only for Expense sub-categories)
   const localSales = filteredTransactions
     .filter(t => t.type === 'kirim')
     .reduce((acc, curr) => acc + curr.amount, 0);
@@ -284,12 +289,7 @@ const XPro: React.FC = () => {
   const localBalance = localSales - localExpenses;
 
   const isExpenseTab = activeTab === 'Xarajat';
-  const displaySales = isExpenseTab ? localSales : globalSales;
-  const displayExpenses = isExpenseTab ? localExpenses : globalExpenses;
-  const displayBalance = isExpenseTab ? localBalance : globalBalance;
-  
-  const currentLabelSuffix = isExpenseTab ? ` (${activeSubTab || 'Xarajat'})` : ' (Jami)';
-  const currentExpenseSuffix = isExpenseTab ? ` (${activeSubTab || 'Xarajat'})` : ' (Smena)';
+  const currentCategoryName = activeSubTab || activeTab;
 
   const mainTabs = [
     { name: 'Kassa', icon: Banknote },
@@ -324,7 +324,6 @@ const XPro: React.FC = () => {
   }
 
   const shiftNameWithoutTime = activeShift.name.split(' ').slice(0, 3).join(' ');
-  const currentCategoryName = activeSubTab || activeTab;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20 no-print">
@@ -353,8 +352,10 @@ const XPro: React.FC = () => {
               setActiveTab(tab.name);
               if (tab.name === 'Xarajat' && expenseCategories.length > 0) {
                 setActiveSubTab(expenseCategories[0].name);
+                setEntryType('chiqim');
               } else if (tab.name !== 'Eksport') {
                 setActiveSubTab(null);
+                setEntryType('kirim');
               }
             }}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all border text-sm ${
@@ -409,6 +410,14 @@ const XPro: React.FC = () => {
                     <span className="font-bold text-center break-words w-full text-[13px] leading-tight">{cat.name}</span>
                   </div>
                 ))}
+                {/* Yangi kategoriya qo'shish tugmasi */}
+                <button 
+                  onClick={handleAddCategory}
+                  className="h-12 rounded-xl border-2 border-dashed border-indigo-200 dark:border-slate-800 hacker:border-[#0f0] flex items-center justify-center gap-2 text-indigo-500 hacker:text-[#0f0] hover:bg-indigo-50 dark:hover:bg-slate-800 transition-all hacker:rounded-none"
+                >
+                  <Plus size={20} />
+                  <span className="font-bold text-[12px] hacker:font-mono">Qo'shish</span>
+                </button>
               </div>
             </div>
           )}
@@ -424,10 +433,12 @@ const XPro: React.FC = () => {
                   </h3>
                   {entryType === 'kirim' && <span className="px-2 py-0.5 bg-green-50 dark:bg-green-900/20 text-green-600 rounded text-[10px] font-black uppercase animate-pulse">Savdo rejimi</span>}
                 </div>
-                <div className="text-right">
-                  <p className="text-[9px] font-bold text-slate-400 uppercase hacker:font-mono">{currentCategoryName} jami</p>
-                  <p className="font-black text-slate-800 dark:text-white hacker:text-[#0f0] text-sm hacker:font-mono">{(entryType === 'kirim' ? localSales : localExpenses).toLocaleString()} so'm</p>
-                </div>
+                {isExpenseTab && (
+                  <div className="text-right">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase hacker:font-mono">{currentCategoryName} jami</p>
+                    <p className="font-black text-slate-800 dark:text-white hacker:text-[#0f0] text-sm hacker:font-mono">{(entryType === 'kirim' ? localSales : localExpenses).toLocaleString()} so'm</p>
+                  </div>
+                )}
               </div>
               <form onSubmit={handleSave} className="space-y-4">
                 <div className="relative">
@@ -453,53 +464,55 @@ const XPro: React.FC = () => {
             </div>
           </div>
 
-          {/* 2. Stats Cards Section */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-            {/* Savdo Card */}
-            <div className={`bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-2xl border transition-all shadow-sm flex items-center justify-between group cursor-default ${entryType === 'kirim' ? 'border-green-400 ring-4 ring-green-50' : 'border-slate-100 dark:border-slate-800'}`}>
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Savdo{currentLabelSuffix}</p>
-                <h3 className="text-xl font-black text-slate-800 dark:text-white hacker:text-[#0f0] hacker:font-mono">
-                  {displaySales.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span>
-                </h3>
+          {/* 2. Stats Cards Section (Faqat Xarajat bo'limi uchun) */}
+          {isExpenseTab && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+              {/* Savdo Card */}
+              <div className={`bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-2xl border transition-all shadow-sm flex items-center justify-between group cursor-default ${entryType === 'kirim' ? 'border-green-400 ring-4 ring-green-50' : 'border-slate-100 dark:border-slate-800'}`}>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Savdo ({activeSubTab || 'Xarajat'})</p>
+                  <h3 className="text-xl font-black text-slate-800 dark:text-white hacker:text-[#0f0] hacker:font-mono">
+                    {localSales.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span>
+                  </h3>
+                </div>
+                <button 
+                  onClick={() => setManualEntry('kirim')}
+                  className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all active:scale-90 ${entryType === 'kirim' ? 'bg-green-600 text-white' : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-green-100'}`}
+                  title="Savdo kiritish"
+                >
+                  <ArrowUpRight size={24} />
+                </button>
               </div>
-              <button 
-                onClick={() => setManualEntry('kirim')}
-                className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all active:scale-90 ${entryType === 'kirim' ? 'bg-green-600 text-white' : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-green-100'}`}
-                title="Savdo kiritish"
-              >
-                <ArrowUpRight size={24} />
-              </button>
-            </div>
 
-            {/* Xarajat Card */}
-            <div className={`bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-2xl border transition-all shadow-sm flex items-center justify-between group cursor-default ${entryType === 'chiqim' ? 'border-red-400 ring-4 ring-red-50' : 'border-slate-100 dark:border-slate-800'}`}>
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Xarajat{currentExpenseSuffix}</p>
-                <h3 className="text-xl font-black text-red-500 dark:text-red-400 hacker:text-[#f00] hacker:font-mono">
-                  {displayExpenses.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span>
-                </h3>
+              {/* Xarajat Card */}
+              <div className={`bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-2xl border transition-all shadow-sm flex items-center justify-between group cursor-default ${entryType === 'chiqim' ? 'border-red-400 ring-4 ring-red-50' : 'border-slate-100 dark:border-slate-800'}`}>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Xarajat ({activeSubTab || 'Xarajat'})</p>
+                  <h3 className="text-xl font-black text-red-500 dark:text-red-400 hacker:text-[#f00] hacker:font-mono">
+                    {localExpenses.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span>
+                  </h3>
+                </div>
+                <button 
+                  onClick={() => setManualEntry('chiqim')}
+                  className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all active:scale-90 ${entryType === 'chiqim' ? 'bg-red-600 text-white' : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100'}`}
+                  title="Xarajat kiritish"
+                >
+                  <ArrowDownRight size={24} />
+                </button>
               </div>
-              <button 
-                onClick={() => setManualEntry('chiqim')}
-                className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all active:scale-90 ${entryType === 'chiqim' ? 'bg-red-600 text-white' : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100'}`}
-                title="Xarajat kiritish"
-              >
-                <ArrowDownRight size={24} />
-              </button>
-            </div>
 
-            {/* Qoldiq Card */}
-            <div className="bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-2xl border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm flex items-center justify-between transition-all">
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Qoldiq{currentLabelSuffix}</p>
-                <h3 className={`text-xl font-black hacker:font-mono ${displayBalance >= 0 ? 'text-green-600 dark:text-green-400 hacker:text-[#0f0]' : 'text-orange-500'}`}>
-                  {displayBalance.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span>
-                </h3>
+              {/* Qoldiq Card */}
+              <div className="bg-white dark:bg-slate-900 hacker:bg-black p-5 rounded-2xl border border-slate-100 dark:border-slate-800 hacker:border-[#0f0] shadow-sm flex items-center justify-between transition-all">
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 hacker:font-mono">Qoldiq ({activeSubTab || 'Xarajat'})</p>
+                  <h3 className={`text-xl font-black hacker:font-mono ${localBalance >= 0 ? 'text-green-600 dark:text-green-400 hacker:text-[#0f0]' : 'text-orange-500'}`}>
+                    {localBalance.toLocaleString()} <span className="text-xs font-bold text-slate-400">so'm</span>
+                  </h3>
+                </div>
+                <div className={`w-12 h-12 ${localBalance >= 0 ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' : 'bg-orange-50 text-orange-500'} hacker:text-[#0f0] rounded-xl flex items-center justify-center`}><Calculator size={24} /></div>
               </div>
-              <div className={`w-12 h-12 ${displayBalance >= 0 ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' : 'bg-orange-50 text-orange-500'} hacker:text-[#0f0] rounded-xl flex items-center justify-center`}><Calculator size={24} /></div>
             </div>
-          </div>
+          )}
 
           {/* 3. Recent Transactions Section */}
           <div className="space-y-3 mt-8">
