@@ -2,9 +2,21 @@
 import { GoogleGenAI } from "@google/genai";
 import { Transaction } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Xavfsiz API key olish: Brauzerda process.env bo'lmasa xatolik bermaydi
+const getApiKey = () => {
+  try {
+    return (typeof process !== 'undefined' && process.env?.API_KEY) ? process.env.API_KEY : "";
+  } catch {
+    return "";
+  }
+};
+
+const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
 export const getFinancialInsights = async (transactions: Transaction[]) => {
+  const apiKey = getApiKey();
+  if (!apiKey) return "AI xizmati hozircha mavjud emas (API_KEY sozlanmagan).";
+
   const summary = transactions.reduce((acc, curr) => {
     if (curr.type === 'kirim') acc.totalIn += curr.amount;
     else acc.totalOut += curr.amount;
