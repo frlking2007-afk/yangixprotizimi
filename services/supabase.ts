@@ -1,72 +1,70 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { Transaction } from '../types';
+import { Transaction, Shift } from '../types';
 
 const SUPABASE_URL = 'https://zvaxhyszcdvnylcljgxz.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2YXhoeXN6Y2R2bnlsY2xqZ3h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5OTQwNjUsImV4cCI6MjA4NDU3MDA2NX0.rBsMCwKE6x_vsEAeu4ALz7oJd_vl47VQt8URTxvQ5go';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-export const getTransactions = async (): Promise<Transaction[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('transactions')
-      .select('*')
-      .order('date', { ascending: false });
+// SHIFT FUNCTIONS
+export const getActiveShift = async (): Promise<Shift | null> => {
+  const { data, error } = await supabase
+    .from('shifts')
+    .select('*')
+    .eq('status', 'active')
+    .single();
+  if (error) return null;
+  return data as Shift;
+};
 
-    if (error) {
-      console.error('Supabase xatoligi (Olish):', error.message);
-      return [];
-    }
+export const startNewShift = async (): Promise<Shift | null> => {
+  const now = new Date();
+  const name = `Smena - ${now.toLocaleDateString('uz-UZ')} ${now.toLocaleTimeString('uz-UZ', {hour: '2-digit', minute:'2-digit'})}`;
+  const { data, error } = await supabase
+    .from('shifts')
+    .insert([{ name, status: 'active' }])
+    .select()
+    .single();
+  return error ? null : data as Shift;
+};
 
-    return data as Transaction[];
-  } catch (err) {
-    console.error('Tarmoq xatoligi:', err);
-    return [];
-  }
+export const closeShift = async (shiftId: string): Promise<void> => {
+  await supabase
+    .from('shifts')
+    .update({ status: 'closed', end_date: new Date().toISOString() })
+    .eq('id', shiftId);
+};
+
+export const getAllShifts = async (): Promise<Shift[]> => {
+  const { data } = await supabase.from('shifts').select('*').order('start_date', { ascending: false });
+  return data || [];
+};
+
+// TRANSACTION FUNCTIONS
+export const getTransactionsByShift = async (shiftId: string): Promise<Transaction[]> => {
+  const { data } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('shift_id', shiftId)
+    .order('date', { ascending: false });
+  return data || [];
 };
 
 export const saveTransaction = async (transaction: Omit<Transaction, 'id' | 'date'>): Promise<Transaction | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('transactions')
-      .insert([
-        {
-          amount: transaction.amount,
-          category: transaction.category,
-          description: transaction.description,
-          type: transaction.type,
-          date: new Date().toISOString()
-        }
-      ])
-      .select()
-      .single();
-
-    if (error) {
-      alert("Xatolik: Jadval yaratilmagan bo'lishi mumkin. Supabase-da 'transactions' jadvali mavjudligini tekshiring.");
-      console.error('Supabase xatoligi (Saqlash):', error.message);
-      return null;
-    }
-
-    return data as Transaction;
-  } catch (err) {
-    console.error('Insert error:', err);
-    return null;
-  }
+  const { data, error } = await supabase
+    .from('transactions')
+    .insert([transaction])
+    .select()
+    .single();
+  return error ? null : data as Transaction;
 };
 
 export const deleteTransaction = async (id: string): Promise<void> => {
-  try {
-    const { error } = await supabase
-      .from('transactions')
-      .delete()
-      .eq('id', id);
+  await supabase.from('transactions').delete().eq('id', id);
+};
 
-    if (error) {
-      // Fix: Use double quotes to correctly handle the single quote in (O'chirish)
-      console.error("Supabase xatoligi (O'chirish):", error.message);
-    }
-  } catch (err) {
-    console.error('Delete error:', err);
-  }
+export const getTransactions = async (): Promise<Transaction[]> => {
+  const { data } = await supabase.from('transactions').select('*').order('date', { ascending: false });
+  return data || [];
 };
