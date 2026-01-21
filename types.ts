@@ -9,11 +9,18 @@ export interface Shift {
   status: 'active' | 'closed';
 }
 
+export interface ExpenseCategory {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
 export interface Transaction {
   id: string;
   shift_id: string;
   amount: number;
   category: string;
+  sub_category?: string; // Xarajat turi uchun (masalan: Shashlik)
   description: string;
   type: TransactionType;
   date: string;

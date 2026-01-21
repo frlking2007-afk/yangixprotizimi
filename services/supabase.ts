@@ -1,11 +1,24 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { Transaction, Shift } from '../types';
+import { Transaction, Shift, ExpenseCategory } from '../types';
 
 const SUPABASE_URL = 'https://zvaxhyszcdvnylcljgxz.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2YXhoeXN6Y2R2bnlsY2xqZ3h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5OTQwNjUsImV4cCI6MjA4NDU3MDA2NX0.rBsMCwKE6x_vsEAeu4ALz7oJd_vl47VQt8URTxvQ5go';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// EXPENSE CATEGORIES
+export const getExpenseCategories = async (): Promise<ExpenseCategory[]> => {
+  const { data, error } = await supabase.from('expense_categories').select('*').order('created_at', { ascending: true });
+  if (error) return [];
+  return data;
+};
+
+export const createExpenseCategory = async (name: string): Promise<ExpenseCategory | null> => {
+  const { data, error } = await supabase.from('expense_categories').insert([{ name }]).select().single();
+  if (error) throw error;
+  return data;
+};
 
 // SHIFT FUNCTIONS
 export const getActiveShift = async (): Promise<Shift | null> => {
@@ -14,12 +27,9 @@ export const getActiveShift = async (): Promise<Shift | null> => {
       .from('shifts')
       .select('*')
       .eq('status', 'active')
-      .maybeSingle(); // single() o'rniga maybeSingle() xatolik chiqishini kamaytiradi
+      .maybeSingle();
     
-    if (error) {
-      console.error("Shift yuklashda xato:", error.message);
-      return null;
-    }
+    if (error) return null;
     return data as Shift;
   } catch (err) {
     return null;
@@ -36,10 +46,7 @@ export const startNewShift = async (): Promise<Shift | null> => {
     .select()
     .single();
 
-  if (error) {
-    console.error("Smena ochishda xato:", error.message);
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
   return data as Shift;
 };
 
