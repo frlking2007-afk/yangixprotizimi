@@ -350,9 +350,9 @@ const XPro: React.FC = () => {
   const totalOut = transactions.filter(t => t.type === 'chiqim').reduce((acc, curr) => acc + curr.amount, 0);
   const totalBalance = totalIn - totalOut;
   
-  // Click, Uzcard, Humo umumiy summasi (Savdo kartasida ko'rsatiladi)
-  const clickUzcardHumoTotal = transactions
-    .filter(t => t.type === 'kirim' && ['Click', 'Uzcard', 'Humo'].includes(t.category))
+  // Faqat "Savdo" kartasiga kiritilgan summalar (Kassa kategoryasidagi "Savdo" description'li xarajatlar)
+  const savdoTotal = transactions
+    .filter(t => t.category === 'Kassa' && t.type === 'chiqim' && t.description === 'Savdo')
     .reduce((acc, curr) => acc + curr.amount, 0);
   
   // Handle Savdo card click
@@ -513,7 +513,7 @@ const XPro: React.FC = () => {
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Savdo (Jami)</p>
                   <div className="flex items-baseline gap-1">
-                    <h3 className="text-2xl font-black text-slate-900 dark:text-white">{clickUzcardHumoTotal.toLocaleString()}</h3>
+                    <h3 className="text-2xl font-black text-slate-900 dark:text-white">{savdoTotal.toLocaleString()}</h3>
                     <span className="text-[10px] font-bold text-slate-400 uppercase">so'm</span>
                   </div>
                 </div>
