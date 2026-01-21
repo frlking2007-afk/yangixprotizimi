@@ -483,6 +483,49 @@ const XPro: React.FC = () => {
             </div>
           </div>
 
+          {/* TRANSACTION FORM - For Click, Uzcard, Humo tabs */}
+          {['Click', 'Uzcard', 'Humo'].includes(activeTab) && (
+            <div className="bg-white dark:bg-slate-900 hacker:bg-black rounded-[2rem] border-2 border-blue-200 dark:border-blue-900/30 shadow-lg p-6">
+              <h3 className="text-blue-600 dark:text-blue-400 font-bold text-lg mb-4">{activeTab}</h3>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={formAmount}
+                    onChange={handleFormAmountChange}
+                    placeholder="0"
+                    className="flex-1 p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl outline-none font-bold text-lg text-slate-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900"
+                  />
+                  <span className="text-slate-600 dark:text-slate-400 font-bold">so'm</span>
+                </div>
+                <input
+                  type="text"
+                  value={formDescription}
+                  onChange={(e) => setFormDescription(e.target.value)}
+                  placeholder="Tavsif (ixtiyoriy)..."
+                  className="w-full p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-sm text-slate-700 dark:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900"
+                />
+                <button
+                  onClick={handleSubmitTransaction}
+                  disabled={isSubmitting || !formAmount}
+                  className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <RefreshCcw className="animate-spin" size={20} />
+                      Saqlanmoqda...
+                    </>
+                  ) : (
+                    <>
+                      <Check size={20} />
+                      Saqlash
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'Xarajat' && (
             <div className="space-y-2">
               <div className="flex items-center justify-between px-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kategoriyalar</div>
