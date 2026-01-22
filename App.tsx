@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect } from 'react';
-import { SpeedInsights } from "@vercel/speed-insights/react";
 import Layout from './components/Layout.tsx';
 import XPro from './pages/XPro.tsx';
 import Reports from './pages/Reports.tsx';
@@ -58,12 +57,9 @@ const App: React.FC = () => {
   };
 
   return (
-    <>
-      <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
-        {renderContent()}
-      </Layout>
-      <SpeedInsights />
-    </>
+    <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
+      {renderContent()}
+    </Layout>
   );
 };
 
