@@ -480,8 +480,8 @@ const XPro: React.FC = () => {
                 <div key={cat.id} className={`relative h-12 rounded-xl border transition-all cursor-pointer flex items-center justify-center p-2 ${activeSubTab === cat.name ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-900 text-slate-600'}`} onClick={() => setActiveSubTab(cat.name)}>
                   <span className="font-bold text-center text-[12px]">{cat.name}</span>
                   <div className="absolute -top-1.5 -right-1.5 flex gap-1 bg-white dark:bg-slate-800 p-0.5 rounded-lg shadow-md border border-slate-100 z-10">
-                     <button onClick={(e) => handleEditCategoryName(e, cat.id, cat.name)} className="p-1 text-slate-400 hover:text-indigo-600"><Edit2 size={10} /></button>
-                     <button onClick={(e) => handleDeleteCategoryWithConfirmation(e, cat.id, cat.name)} className="p-1 text-slate-400 hover:text-red-500"><X size={10} /></button>
+                     <button onClick={(e) => handleEditCategoryName(e, cat.id, cat.name)} className="p-1 text-slate-400 hacker:text-indigo-600"><Edit2 size={10} /></button>
+                     <button onClick={(e) => handleDeleteCategoryWithConfirmation(e, cat.id, cat.name)} className="p-1 text-slate-400 hacker:text-red-500"><X size={10} /></button>
                   </div>
                 </div>
               ))}
@@ -489,41 +489,70 @@ const XPro: React.FC = () => {
             </div>
           )}
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between px-2">
-              <h3 className="font-bold text-slate-800 dark:text-white text-sm uppercase tracking-widest">Amallar</h3>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{filteredTransactions.length} ta</span>
+          {activeTab !== 'Kassa' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-2">
+                <h3 className="font-bold text-slate-800 dark:text-white text-sm uppercase tracking-widest hacker:text-[#0f0]">Amallar</h3>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hacker:text-[#0f0]">{filteredTransactions.length} ta</span>
+              </div>
+              <div className="space-y-2.5">
+                {filteredTransactions.map((t) => (
+                  <div key={t.id} className="bg-white dark:bg-slate-900 hacker:bg-black p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm group">
+                    {editingId === t.id ? (
+                      <div className="space-y-4 animate-in fade-in duration-300">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1 ml-1">Summa</label>
+                            <input 
+                              value={editData.amount} 
+                              onChange={handleEditAmountChange} 
+                              className="w-full p-3 bg-slate-50 dark:bg-slate-800 hacker:bg-black border border-slate-200 dark:border-slate-700 hacker:border-[#0f0] rounded-xl text-sm font-bold dark:text-white hacker:text-[#0f0] outline-none focus:ring-1 focus:ring-indigo-500" 
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1 ml-1">Tavsif</label>
+                            <input 
+                              value={editData.description} 
+                              onChange={(e) => setEditData({...editData, description: e.target.value})} 
+                              className="w-full p-3 bg-slate-50 dark:bg-slate-800 hacker:bg-black border border-slate-200 dark:border-slate-700 hacker:border-[#0f0] rounded-xl text-sm font-medium dark:text-white hacker:text-[#0f0] outline-none focus:ring-1 focus:ring-indigo-500" 
+                            />
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-3 pt-1">
+                          <button 
+                            onClick={() => setEditingId(null)} 
+                            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                          >
+                            <X size={14} /> Bekor qilish
+                          </button>
+                          <button 
+                            onClick={() => saveEdit(t.id)} 
+                            className="flex items-center gap-2 px-5 py-2 bg-green-600 text-white text-xs font-bold rounded-xl shadow-md active:scale-95"
+                          >
+                            <Check size={14} /> Saqlash
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t.type === 'kirim' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{t.type === 'kirim' ? <Plus size={18} /> : <TrendingDown size={18} />}</div>
+                          <div><p className="font-bold text-slate-800 dark:text-white hacker:text-[#0f0] text-[13px]">{t.description || 'Tavsifsiz'}</p><p className="text-[10px] text-slate-400 uppercase font-bold hacker:text-[#0f0]/60">{t.sub_category || t.category}</p></div>
+                        </div>
+                        <div className="flex items-center gap-4 text-right">
+                          <p className={`font-black text-sm ${t.type === 'kirim' ? 'text-green-600' : 'text-red-500'} hacker:text-[#0f0]`}>{(t.amount || 0).toLocaleString()}</p>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all"><button onClick={() => startEdit(t)} className="p-1 text-slate-400 hacker:text-[#0f0]"><Edit2 size={14} /></button><button onClick={() => handleDelete(t.id)} className="p-1 text-slate-400 hacker:text-[#0f0]"><Trash2 size={14} /></button></div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {filteredTransactions.length === 0 && (
+                  <div className="text-center py-10 text-slate-400 italic text-sm hacker:text-[#0f0]/40">Ushbu bo'limda amallar mavjud emas</div>
+                )}
+              </div>
             </div>
-            <div className="space-y-2.5">
-              {filteredTransactions.map((t) => (
-                <div key={t.id} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 shadow-sm group">
-                  {editingId === t.id ? (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-2">
-                        <input value={editData.amount} onChange={handleEditAmountChange} className="p-2 border rounded-lg text-sm" />
-                        <input value={editData.description} onChange={(e) => setEditData({...editData, description: e.target.value})} className="p-2 border rounded-lg text-sm" />
-                      </div>
-                      <div className="flex justify-end gap-2"><button onClick={() => setEditingId(null)} className="p-1"><X /></button><button onClick={() => saveEdit(t.id)} className="p-1 text-green-500"><Check /></button></div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t.type === 'kirim' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{t.type === 'kirim' ? <Plus size={18} /> : <TrendingDown size={18} />}</div>
-                        <div><p className="font-bold text-slate-800 dark:text-white text-[13px]">{t.description || 'Tavsifsiz'}</p><p className="text-[10px] text-slate-400 uppercase font-bold">{t.sub_category || t.category}</p></div>
-                      </div>
-                      <div className="flex items-center gap-4 text-right">
-                        <p className={`font-black text-sm ${t.type === 'kirim' ? 'text-green-600' : 'text-red-500'}`}>{(t.amount || 0).toLocaleString()}</p>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all"><button onClick={() => startEdit(t)} className="p-1 text-slate-400"><Edit2 size={14} /></button><button onClick={() => handleDelete(t.id)} className="p-1 text-slate-400"><Trash2 size={14} /></button></div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-              {filteredTransactions.length === 0 && (
-                <div className="text-center py-10 text-slate-400 italic text-sm">Ushbu bo'limda amallar mavjud emas</div>
-              )}
-            </div>
-          </div>
+          )}
         </div>
       )}
     </div>
