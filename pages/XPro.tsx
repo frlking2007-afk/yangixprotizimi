@@ -6,7 +6,7 @@ import {
   PlayCircle, RefreshCcw, 
   Edit2, X, Check, ArrowUpRight, ArrowDownRight, 
   Calculator, Download, Printer, Save, Loader2,
-  TrendingUp, Coins
+  TrendingUp, Coins, Settings2
 } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 import { Transaction, Shift, ExpenseCategory } from '../types.ts';
@@ -57,8 +57,16 @@ const XPro: React.FC = () => {
   
   // Kassa manual sum state
   const [manualKassaSum, setManualKassaSum] = useState<number>(0);
-  // Savdo manual sum state (for Xarajat sub-categories)
+  // Savdo manual sum state
   const [manualSavdoSums, setManualSavdoSums] = useState<Record<string, number>>({});
+  
+  // Custom Filters for Xarajat Stat Card
+  const [expenseFilters, setExpenseFilters] = useState({
+    xarajat: true,
+    click: false,
+    terminal: false
+  });
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
   // New Transaction Form State
   const [amountInput, setAmountInput] = useState('');
@@ -89,9 +97,13 @@ const XPro: React.FC = () => {
         const savedSum = localStorage.getItem(`kassa_sum_${shift.id}`);
         if (savedSum) setManualKassaSum(parseFloat(savedSum));
 
-        // Restore manual savdo sums for categories
+        // Restore manual savdo sums
         const savedSavdo = localStorage.getItem(`savdo_sums_${shift.id}`);
         if (savedSavdo) setManualSavdoSums(JSON.parse(savedSavdo));
+
+        // Restore expense filters
+        const savedFilters = localStorage.getItem(`expense_filters_${shift.id}`);
+        if (savedFilters) setExpenseFilters(JSON.parse(savedFilters));
       }
 
       if (activeTab === 'Xarajat' && !activeSubTab && categories && categories.length > 0) {
@@ -107,6 +119,13 @@ const XPro: React.FC = () => {
   useEffect(() => {
     initData();
   }, []);
+
+  // Save filters whenever they change
+  useEffect(() => {
+    if (activeShift) {
+      localStorage.setItem(`expense_filters_${activeShift.id}`, JSON.stringify(expenseFilters));
+    }
+  }, [expenseFilters, activeShift]);
 
   const formatAmount = (val: string) => {
     const digits = val.replace(/\D/g, '');
@@ -211,13 +230,12 @@ const XPro: React.FC = () => {
 
   const handleEditCategoryName = async (e: React.MouseEvent, id: string, oldName: string) => {
     e.stopPropagation();
-    const nameToEdit = oldName;
-    const newName = prompt("Yangi nom:", nameToEdit);
-    if (!newName || newName.trim() === '' || newName === nameToEdit) return;
+    const newName = prompt("Yangi nom:", oldName);
+    if (!newName || newName.trim() === '' || newName === oldName) return;
     try {
       await updateExpenseCategory(id, newName.trim());
       setExpenseCategories(expenseCategories.map(c => c.id === id ? { ...c, name: newName.trim() } : c));
-      if (activeSubTab === nameToEdit) setActiveSubTab(newName.trim());
+      if (activeSubTab === oldName) setActiveSubTab(newName.trim());
     } catch (err: any) {
       alert("Xato: " + err.message);
     }
@@ -347,9 +365,27 @@ const XPro: React.FC = () => {
   const totalBalance = manualKassaSum - totalExpensesAcrossTypes;
 
   // Stats for Xarajat sub-category
-  const currentSubCatExpenses = transactions
-    .filter(t => t.category === 'Xarajat' && t.sub_category === activeSubTab)
-    .reduce((acc, curr) => acc + (curr.amount || 0), 0);
+  const calculateConfiguredExpenses = () => {
+    let total = 0;
+    if (expenseFilters.xarajat) {
+      total += transactions
+        .filter(t => t.category === 'Xarajat' && t.sub_category === activeSubTab)
+        .reduce((acc, curr) => acc + (curr.amount || 0), 0);
+    }
+    if (expenseFilters.click) {
+      total += transactions
+        .filter(t => t.category === 'Click')
+        .reduce((acc, curr) => acc + (curr.amount || 0), 0);
+    }
+    if (expenseFilters.terminal) {
+      total += transactions
+        .filter(t => t.category === 'Uzcard' || t.category === 'Humo')
+        .reduce((acc, curr) => acc + (curr.amount || 0), 0);
+    }
+    return total;
+  };
+
+  const currentSubCatExpenses = calculateConfiguredExpenses();
   const currentSubCatSavdo = activeSubTab ? (manualSavdoSums[activeSubTab] || 0) : 0;
   const currentSubCatProfit = currentSubCatSavdo - currentSubCatExpenses;
 
@@ -386,6 +422,66 @@ const XPro: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20 no-print">
+      {/* Settings Modal for Expense Filter */}
+      {isFilterModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 hacker:bg-black w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 dark:border-slate-800 space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-black text-slate-800 dark:text-white hacker:text-[#0f0]">Hisoblash sozlamalari</h3>
+              <button onClick={() => setIsFilterModalOpen(false)} className="p-2 text-slate-400 hover:bg-slate-50 rounded-full transition-colors"><X size={20} /></button>
+            </div>
+            
+            <div className="space-y-3">
+              <label className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all">
+                <input 
+                  type="checkbox" 
+                  checked={expenseFilters.xarajat} 
+                  onChange={() => setExpenseFilters(prev => ({...prev, xarajat: !prev.xarajat}))}
+                  className="w-6 h-6 rounded-lg text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                />
+                <div className="flex-1">
+                  <p className="font-bold text-slate-800 dark:text-white hacker:text-[#0f0]">Xarajatlarni hisoblash</p>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Faqat {activeSubTab} chiqimlari</p>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all">
+                <input 
+                  type="checkbox" 
+                  checked={expenseFilters.click} 
+                  onChange={() => setExpenseFilters(prev => ({...prev, click: !prev.click}))}
+                  className="w-6 h-6 rounded-lg text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                />
+                <div className="flex-1">
+                  <p className="font-bold text-slate-800 dark:text-white hacker:text-[#0f0]">Clicklarni hisoblash</p>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Shift'dagi barcha clicklar</p>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all">
+                <input 
+                  type="checkbox" 
+                  checked={expenseFilters.terminal} 
+                  onChange={() => setExpenseFilters(prev => ({...prev, terminal: !prev.terminal}))}
+                  className="w-6 h-6 rounded-lg text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                />
+                <div className="flex-1">
+                  <p className="font-bold text-slate-800 dark:text-white hacker:text-[#0f0]">Terminalni hisoblash</p>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Uzcard va Humo summasi</p>
+                </div>
+              </label>
+            </div>
+
+            <button 
+              onClick={() => setIsFilterModalOpen(false)}
+              className="w-full py-4 bg-slate-900 dark:bg-indigo-600 text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all"
+            >
+              Tayyor
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white dark:bg-slate-900 hacker:bg-black p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Clock size={20} className="text-green-600" />
@@ -434,7 +530,7 @@ const XPro: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* 1. Xarajat bo'limida SUB-KATEGORIYALAR (TEPAGA KO'CHIRILDI) */}
+          {/* 1. Xarajat bo'limida SUB-KATEGORIYALAR */}
           {activeTab === 'Xarajat' && (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 animate-in slide-in-from-top-2 duration-300">
               {expenseCategories.map(cat => (
@@ -450,7 +546,7 @@ const XPro: React.FC = () => {
             </div>
           )}
 
-          {/* 2. STATISTIKA KARTALARI (SUB-KATEGORIYADAN PASTGA, LEKIN FORMADAN TEPAGA) */}
+          {/* 2. STATISTIKA KARTALARI - Kassa bo'limida */}
           {activeTab === 'Kassa' && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <StatCard 
@@ -475,33 +571,9 @@ const XPro: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'Xarajat' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
-              <StatCard 
-                label={`${activeSubTab || 'Tanlanmagan'} - Savdo`} 
-                val={currentSubCatSavdo} 
-                icon={<Coins />} 
-                color="green" 
-                onClick={handleSavdoSumClick}
-              />
-              <StatCard 
-                label={`${activeSubTab || 'Tanlanmagan'} - Umumiy Xarajat`} 
-                val={currentSubCatExpenses} 
-                icon={<TrendingDown />} 
-                color="red" 
-              />
-              <StatCard 
-                label={`${activeSubTab || 'Tanlanmagan'} - Foyda`} 
-                val={currentSubCatProfit} 
-                icon={<TrendingUp />} 
-                color="indigo" 
-              />
-            </div>
-          )}
-
-          {/* 3. YANGI OPERATSIYA FORMASI (STATS-DAN PASTGA) */}
+          {/* 3. YANGI OPERATSIYA FORMASI */}
           {activeTab !== 'Kassa' && (
-            <div className="bg-white dark:bg-slate-900 hacker:bg-black p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
+            <div className="bg-white dark:bg-slate-900 hacker:bg-black p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-4 animate-in fade-in duration-300">
                <div className="flex items-center gap-2 mb-2">
                   <Plus size={18} className="text-indigo-600" />
                   <h4 className="font-bold text-sm uppercase tracking-widest text-slate-800 dark:text-white hacker:text-[#0f0]">Yangi operatsiya ({activeTab})</h4>
@@ -539,7 +611,33 @@ const XPro: React.FC = () => {
             </div>
           )}
 
-          {/* 4. TRANZAKSIYALAR RO'YXATI */}
+          {/* 4. STATISTIKA KARTALARI - Xarajat bo'limida */}
+          {activeTab === 'Xarajat' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <StatCard 
+                label={`${activeSubTab || 'Tanlanmagan'} - Savdo`} 
+                val={currentSubCatSavdo} 
+                icon={<Coins />} 
+                color="green" 
+                onClick={handleSavdoSumClick}
+              />
+              <StatCard 
+                label={`${activeSubTab || 'Tanlanmagan'} - Umumiy Xarajat`} 
+                val={currentSubCatExpenses} 
+                icon={<Settings2 />} 
+                color="red" 
+                onClick={() => setIsFilterModalOpen(true)}
+              />
+              <StatCard 
+                label={`${activeSubTab || 'Tanlanmagan'} - Foyda`} 
+                val={currentSubCatProfit} 
+                icon={<TrendingUp />} 
+                color="indigo" 
+              />
+            </div>
+          )}
+
+          {/* 5. TRANZAKSIYALAR RO'YXATI */}
           {activeTab !== 'Kassa' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between px-2">
