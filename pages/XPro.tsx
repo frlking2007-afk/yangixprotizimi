@@ -57,16 +57,15 @@ const XPro: React.FC = () => {
   
   // Kassa manual sum state
   const [manualKassaSum, setManualKassaSum] = useState<number>(0);
-  // Savdo manual sum state
+  // Savdo manual sum state (Per sub-tab)
   const [manualSavdoSums, setManualSavdoSums] = useState<Record<string, number>>({});
   
-  // Custom Filters for Xarajat Stat Card
-  const [expenseFilters, setExpenseFilters] = useState({
-    xarajat: true,
-    click: false,
-    terminal: false
-  });
+  // Custom Filters for Xarajat Stat Card (Per sub-tab)
+  const [allExpenseFilters, setAllExpenseFilters] = useState<Record<string, { xarajat: boolean, click: boolean, terminal: boolean }>>({});
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+
+  // Default filters for new sub-tabs
+  const defaultFilter = { xarajat: true, click: false, terminal: false };
 
   // New Transaction Form State
   const [amountInput, setAmountInput] = useState('');
@@ -101,9 +100,9 @@ const XPro: React.FC = () => {
         const savedSavdo = localStorage.getItem(`savdo_sums_${shift.id}`);
         if (savedSavdo) setManualSavdoSums(JSON.parse(savedSavdo));
 
-        // Restore expense filters
-        const savedFilters = localStorage.getItem(`expense_filters_${shift.id}`);
-        if (savedFilters) setExpenseFilters(JSON.parse(savedFilters));
+        // Restore ALL expense filters (specific to each sub-tab)
+        const savedFilters = localStorage.getItem(`all_expense_filters_${shift.id}`);
+        if (savedFilters) setAllExpenseFilters(JSON.parse(savedFilters));
       }
 
       if (activeTab === 'Xarajat' && !activeSubTab && categories && categories.length > 0) {
@@ -120,12 +119,12 @@ const XPro: React.FC = () => {
     initData();
   }, []);
 
-  // Save filters whenever they change
+  // Save all filters whenever they change
   useEffect(() => {
     if (activeShift) {
-      localStorage.setItem(`expense_filters_${activeShift.id}`, JSON.stringify(expenseFilters));
+      localStorage.setItem(`all_expense_filters_${activeShift.id}`, JSON.stringify(allExpenseFilters));
     }
-  }, [expenseFilters, activeShift]);
+  }, [allExpenseFilters, activeShift]);
 
   const formatAmount = (val: string) => {
     const digits = val.replace(/\D/g, '');
@@ -208,6 +207,7 @@ const XPro: React.FC = () => {
         setActiveShift(shift);
         setManualKassaSum(0);
         setManualSavdoSums({});
+        setAllExpenseFilters({});
       }
     } catch (err: any) {
       alert("Smena ochishda xatolik: " + (err.message || "Noma'lum"));
@@ -235,6 +235,21 @@ const XPro: React.FC = () => {
     try {
       await updateExpenseCategory(id, newName.trim());
       setExpenseCategories(expenseCategories.map(c => c.id === id ? { ...c, name: newName.trim() } : c));
+      
+      // Update keys in records
+      if (manualSavdoSums[oldName]) {
+        const newSums = { ...manualSavdoSums };
+        newSums[newName.trim()] = newSums[oldName];
+        delete newSums[oldName];
+        setManualSavdoSums(newSums);
+      }
+      if (allExpenseFilters[oldName]) {
+        const newFilters = { ...allExpenseFilters };
+        newFilters[newName.trim()] = newFilters[oldName];
+        delete newFilters[oldName];
+        setAllExpenseFilters(newFilters);
+      }
+      
       if (activeSubTab === oldName) setActiveSubTab(newName.trim());
     } catch (err: any) {
       alert("Xato: " + err.message);
@@ -358,26 +373,39 @@ const XPro: React.FC = () => {
     } catch (err) { alert('Xatolik yuz berdi.'); } finally { setIsExporting(false); }
   };
 
+  // Current sub-tab filters
+  const currentFilters = activeSubTab ? (allExpenseFilters[activeSubTab] || defaultFilter) : defaultFilter;
+
+  const toggleFilter = (key: keyof typeof defaultFilter) => {
+    if (!activeSubTab) return;
+    const newFilters = { ...allExpenseFilters };
+    const subTabFilters = { ...currentFilters };
+    subTabFilters[key] = !subTabFilters[key];
+    newFilters[activeSubTab] = subTabFilters;
+    setAllExpenseFilters(newFilters);
+  };
+
   // Stats for Kassa tab
   const totalExpensesAcrossTypes = transactions
     .filter(t => ['Click', 'Uzcard', 'Humo', 'Xarajat'].includes(t.category))
     .reduce((acc, curr) => acc + (curr.amount || 0), 0);
   const totalBalance = manualKassaSum - totalExpensesAcrossTypes;
 
-  // Stats for Xarajat sub-category
+  // Stats for Xarajat sub-category (Based on current sub-tab's filters)
   const calculateConfiguredExpenses = () => {
+    if (!activeSubTab) return 0;
     let total = 0;
-    if (expenseFilters.xarajat) {
+    if (currentFilters.xarajat) {
       total += transactions
         .filter(t => t.category === 'Xarajat' && t.sub_category === activeSubTab)
         .reduce((acc, curr) => acc + (curr.amount || 0), 0);
     }
-    if (expenseFilters.click) {
+    if (currentFilters.click) {
       total += transactions
         .filter(t => t.category === 'Click')
         .reduce((acc, curr) => acc + (curr.amount || 0), 0);
     }
-    if (expenseFilters.terminal) {
+    if (currentFilters.terminal) {
       total += transactions
         .filter(t => t.category === 'Uzcard' || t.category === 'Humo')
         .reduce((acc, curr) => acc + (curr.amount || 0), 0);
@@ -422,12 +450,15 @@ const XPro: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20 no-print">
-      {/* Settings Modal for Expense Filter */}
+      {/* Settings Modal for Expense Filter (Per sub-tab) */}
       {isFilterModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 hacker:bg-black w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 dark:border-slate-800 space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-black text-slate-800 dark:text-white hacker:text-[#0f0]">Hisoblash sozlamalari</h3>
+              <div>
+                <h3 className="text-xl font-black text-slate-800 dark:text-white hacker:text-[#0f0]">Hisoblash sozlamalari</h3>
+                <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">{activeSubTab}</p>
+              </div>
               <button onClick={() => setIsFilterModalOpen(false)} className="p-2 text-slate-400 hover:bg-slate-50 rounded-full transition-colors"><X size={20} /></button>
             </div>
             
@@ -435,8 +466,8 @@ const XPro: React.FC = () => {
               <label className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all">
                 <input 
                   type="checkbox" 
-                  checked={expenseFilters.xarajat} 
-                  onChange={() => setExpenseFilters(prev => ({...prev, xarajat: !prev.xarajat}))}
+                  checked={currentFilters.xarajat} 
+                  onChange={() => toggleFilter('xarajat')}
                   className="w-6 h-6 rounded-lg text-indigo-600 focus:ring-indigo-500 border-slate-300"
                 />
                 <div className="flex-1">
@@ -448,8 +479,8 @@ const XPro: React.FC = () => {
               <label className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all">
                 <input 
                   type="checkbox" 
-                  checked={expenseFilters.click} 
-                  onChange={() => setExpenseFilters(prev => ({...prev, click: !prev.click}))}
+                  checked={currentFilters.click} 
+                  onChange={() => toggleFilter('click')}
                   className="w-6 h-6 rounded-lg text-indigo-600 focus:ring-indigo-500 border-slate-300"
                 />
                 <div className="flex-1">
@@ -461,8 +492,8 @@ const XPro: React.FC = () => {
               <label className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all">
                 <input 
                   type="checkbox" 
-                  checked={expenseFilters.terminal} 
-                  onChange={() => setExpenseFilters(prev => ({...prev, terminal: !prev.terminal}))}
+                  checked={currentFilters.terminal} 
+                  onChange={() => toggleFilter('terminal')}
                   className="w-6 h-6 rounded-lg text-indigo-600 focus:ring-indigo-500 border-slate-300"
                 />
                 <div className="flex-1">
@@ -611,7 +642,7 @@ const XPro: React.FC = () => {
             </div>
           )}
 
-          {/* 4. STATISTIKA KARTALARI - Xarajat bo'limida */}
+          {/* 4. STATISTIKA KARTALARI - Xarajat bo'limida (Endi sozlamalari sub-tabga qarab o'zgaradi) */}
           {activeTab === 'Xarajat' && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <StatCard 
