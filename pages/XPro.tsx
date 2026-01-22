@@ -211,12 +211,13 @@ const XPro: React.FC = () => {
 
   const handleEditCategoryName = async (e: React.MouseEvent, id: string, oldName: string) => {
     e.stopPropagation();
-    const newName = prompt("Yangi nom:", oldName);
-    if (!newName || newName.trim() === '' || newName === oldName) return;
+    const nameToEdit = oldName;
+    const newName = prompt("Yangi nom:", nameToEdit);
+    if (!newName || newName.trim() === '' || newName === nameToEdit) return;
     try {
       await updateExpenseCategory(id, newName.trim());
       setExpenseCategories(expenseCategories.map(c => c.id === id ? { ...c, name: newName.trim() } : c));
-      if (activeSubTab === oldName) setActiveSubTab(newName.trim());
+      if (activeSubTab === nameToEdit) setActiveSubTab(newName.trim());
     } catch (err: any) {
       alert("Xato: " + err.message);
     }
@@ -234,8 +235,9 @@ const XPro: React.FC = () => {
       }
       if (confirm(`"${name}" o'chirilsinmi?`)) {
         await deleteExpenseCategory(id);
-        setExpenseCategories(expenseCategories.filter(c => c.id !== id));
-        if (activeSubTab === name) setActiveSubTab(expenseCategories.length > 0 ? expenseCategories[0].name : null);
+        const updatedCats = expenseCategories.filter(c => c.id !== id);
+        setExpenseCategories(updatedCats);
+        if (activeSubTab === name) setActiveSubTab(updatedCats.length > 0 ? updatedCats[0].name : null);
       }
     } catch (err: any) {
       alert("Xato: " + err.message);
@@ -398,8 +400,11 @@ const XPro: React.FC = () => {
             key={tab.name}
             onClick={() => {
               setActiveTab(tab.name);
-              if (tab.name === 'Xarajat' && expenseCategories.length > 0) setActiveSubTab(expenseCategories[0].name);
-              else if (tab.name !== 'Eksport') setActiveSubTab(null);
+              if (tab.name === 'Xarajat' && expenseCategories.length > 0) {
+                if (!activeSubTab) setActiveSubTab(expenseCategories[0].name);
+              } else if (tab.name !== 'Eksport') {
+                setActiveSubTab(null);
+              }
             }}
             className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold transition-all border text-sm ${
               activeTab === tab.name ? 'bg-slate-900 text-white border-slate-900' : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-100 dark:border-slate-800'
@@ -429,7 +434,23 @@ const XPro: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Statistika kartochkalari - Kassa bo'limida */}
+          {/* 1. Xarajat bo'limida SUB-KATEGORIYALAR (TEPAGA KO'CHIRILDI) */}
+          {activeTab === 'Xarajat' && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 animate-in slide-in-from-top-2 duration-300">
+              {expenseCategories.map(cat => (
+                <div key={cat.id} className={`relative h-12 rounded-xl border transition-all cursor-pointer flex items-center justify-center p-2 ${activeSubTab === cat.name ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-900 text-slate-600 border-slate-100 dark:border-slate-800'}`} onClick={() => setActiveSubTab(cat.name)}>
+                  <span className="font-bold text-center text-[12px]">{cat.name}</span>
+                  <div className="absolute -top-1.5 -right-1.5 flex gap-1 bg-white dark:bg-slate-800 p-0.5 rounded-lg shadow-md border border-slate-100 z-10">
+                     <button onClick={(e) => handleEditCategoryName(e, cat.id, cat.name)} className="p-1 text-slate-400 hover:text-indigo-600"><Edit2 size={10} /></button>
+                     <button onClick={(e) => handleDeleteCategoryWithConfirmation(e, cat.id, cat.name)} className="p-1 text-slate-400 hover:text-red-500"><X size={10} /></button>
+                  </div>
+                </div>
+              ))}
+              <button onClick={handleAddCategory} className="h-12 rounded-xl border-2 border-dashed border-indigo-200 flex items-center justify-center text-indigo-500 hover:bg-indigo-50 transition-colors"><Plus size={20} /></button>
+            </div>
+          )}
+
+          {/* 2. STATISTIKA KARTALARI (SUB-KATEGORIYADAN PASTGA, LEKIN FORMADAN TEPAGA) */}
           {activeTab === 'Kassa' && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <StatCard 
@@ -454,9 +475,8 @@ const XPro: React.FC = () => {
             </div>
           )}
 
-          {/* Statistika kartochkalari - Xarajat bo'limida */}
           {activeTab === 'Xarajat' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in slide-in-from-top-4 duration-500">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
               <StatCard 
                 label={`${activeSubTab || 'Tanlanmagan'} - Savdo`} 
                 val={currentSubCatSavdo} 
@@ -479,7 +499,7 @@ const XPro: React.FC = () => {
             </div>
           )}
 
-          {/* New Transaction Form - Hidden for Kassa tab */}
+          {/* 3. YANGI OPERATSIYA FORMASI (STATS-DAN PASTGA) */}
           {activeTab !== 'Kassa' && (
             <div className="bg-white dark:bg-slate-900 hacker:bg-black p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
                <div className="flex items-center gap-2 mb-2">
@@ -519,21 +539,7 @@ const XPro: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'Xarajat' && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-              {expenseCategories.map(cat => (
-                <div key={cat.id} className={`relative h-12 rounded-xl border transition-all cursor-pointer flex items-center justify-center p-2 ${activeSubTab === cat.name ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-900 text-slate-600'}`} onClick={() => setActiveSubTab(cat.name)}>
-                  <span className="font-bold text-center text-[12px]">{cat.name}</span>
-                  <div className="absolute -top-1.5 -right-1.5 flex gap-1 bg-white dark:bg-slate-800 p-0.5 rounded-lg shadow-md border border-slate-100 z-10">
-                     <button onClick={(e) => handleEditCategoryName(e, cat.id, cat.name)} className="p-1 text-slate-400 hacker:text-indigo-600"><Edit2 size={10} /></button>
-                     <button onClick={(e) => handleDeleteCategoryWithConfirmation(e, cat.id, cat.name)} className="p-1 text-slate-400 hacker:text-red-500"><X size={10} /></button>
-                  </div>
-                </div>
-              ))}
-              <button onClick={handleAddCategory} className="h-12 rounded-xl border-2 border-dashed border-indigo-200 flex items-center justify-center text-indigo-500"><Plus size={20} /></button>
-            </div>
-          )}
-
+          {/* 4. TRANZAKSIYALAR RO'YXATI */}
           {activeTab !== 'Kassa' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between px-2">
