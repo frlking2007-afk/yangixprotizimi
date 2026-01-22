@@ -5,7 +5,8 @@ import {
   Banknote, TrendingDown, Clock, 
   PlayCircle, RefreshCcw, 
   Edit2, X, Check, ArrowUpRight, ArrowDownRight, 
-  Calculator, Download, Printer, Save, Loader2
+  Calculator, Download, Printer, Save, Loader2,
+  TrendingUp, Coins
 } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 import { Transaction, Shift, ExpenseCategory } from '../types.ts';
@@ -17,11 +18,12 @@ import {
   saveTransaction
 } from '../services/supabase.ts';
 
-const StatCard = ({ label, val, icon, color, onClick }: { label: string, val: number, icon: React.ReactNode, color: 'green' | 'red' | 'indigo', onClick?: () => void }) => {
+const StatCard = ({ label, val, icon, color, onClick }: { label: string, val: number, icon: React.ReactNode, color: 'green' | 'red' | 'indigo' | 'amber', onClick?: () => void }) => {
   const colorClasses = {
     green: "bg-green-50 text-green-600",
     red: "bg-red-50 text-red-600",
-    indigo: "bg-indigo-50 text-indigo-600"
+    indigo: "bg-indigo-50 text-indigo-600",
+    amber: "bg-amber-50 text-amber-600"
   };
 
   return (
@@ -31,7 +33,7 @@ const StatCard = ({ label, val, icon, color, onClick }: { label: string, val: nu
     >
       <div>
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-        <h3 className={`text-2xl font-black ${color === 'red' ? 'text-red-500' : 'text-slate-900 dark:text-white hacker:text-[#0f0]'}`}>
+        <h3 className={`text-2xl font-black ${color === 'red' ? 'text-red-500' : color === 'green' ? 'text-green-600' : 'text-slate-900 dark:text-white hacker:text-[#0f0]'}`}>
           {(val || 0).toLocaleString()} <span className="text-[10px] text-slate-400">so'm</span>
         </h3>
       </div>
@@ -55,6 +57,8 @@ const XPro: React.FC = () => {
   
   // Kassa manual sum state
   const [manualKassaSum, setManualKassaSum] = useState<number>(0);
+  // Savdo manual sum state (for Xarajat sub-categories)
+  const [manualSavdoSums, setManualSavdoSums] = useState<Record<string, number>>({});
 
   // New Transaction Form State
   const [amountInput, setAmountInput] = useState('');
@@ -81,9 +85,13 @@ const XPro: React.FC = () => {
         const trans = await getTransactionsByShift(shift.id);
         setTransactions(trans || []);
         
-        // Restore manual kassa sum from localStorage for this shift
+        // Restore manual kassa sum
         const savedSum = localStorage.getItem(`kassa_sum_${shift.id}`);
         if (savedSum) setManualKassaSum(parseFloat(savedSum));
+
+        // Restore manual savdo sums for categories
+        const savedSavdo = localStorage.getItem(`savdo_sums_${shift.id}`);
+        if (savedSavdo) setManualSavdoSums(JSON.parse(savedSavdo));
       }
 
       if (activeTab === 'Xarajat' && !activeSubTab && categories && categories.length > 0) {
@@ -116,17 +124,25 @@ const XPro: React.FC = () => {
   const handleKassaSumClick = () => {
     const input = prompt("Kassa summasini kiriting:", manualKassaSum.toString());
     if (input === null) return;
-    
     const cleanValue = input.replace(/\s/g, '');
     const num = parseFloat(cleanValue);
-    
     if (!isNaN(num)) {
       setManualKassaSum(num);
-      if (activeShift) {
-        localStorage.setItem(`kassa_sum_${activeShift.id}`, num.toString());
-      }
-    } else {
-      alert("Iltimos, faqat raqam kiriting.");
+      if (activeShift) localStorage.setItem(`kassa_sum_${activeShift.id}`, num.toString());
+    }
+  };
+
+  const handleSavdoSumClick = () => {
+    if (!activeSubTab) return;
+    const currentVal = manualSavdoSums[activeSubTab] || 0;
+    const input = prompt(`"${activeSubTab}" uchun savdo summasini kiriting:`, currentVal.toString());
+    if (input === null) return;
+    const cleanValue = input.replace(/\s/g, '');
+    const num = parseFloat(cleanValue);
+    if (!isNaN(num)) {
+      const newSums = { ...manualSavdoSums, [activeSubTab]: num };
+      setManualSavdoSums(newSums);
+      if (activeShift) localStorage.setItem(`savdo_sums_${activeShift.id}`, JSON.stringify(newSums));
     }
   };
 
@@ -154,11 +170,9 @@ const XPro: React.FC = () => {
         type: type
       });
 
-      // Reset form
       setAmountInput('');
       setDescInput('');
       
-      // Refresh transactions
       const trans = await getTransactionsByShift(activeShift.id);
       setTransactions(trans || []);
     } catch (err: any) {
@@ -173,7 +187,8 @@ const XPro: React.FC = () => {
       const shift = await startNewShift();
       if (shift) {
         setActiveShift(shift);
-        setManualKassaSum(0); // Reset for new shift
+        setManualKassaSum(0);
+        setManualSavdoSums({});
       }
     } catch (err: any) {
       alert("Smena ochishda xatolik: " + (err.message || "Noma'lum"));
@@ -323,13 +338,18 @@ const XPro: React.FC = () => {
     } catch (err) { alert('Xatolik yuz berdi.'); } finally { setIsExporting(false); }
   };
 
-  // 2-kartochka: Click, Uzcard, Humo va Xarajat dagi umumiy summa
+  // Stats for Kassa tab
   const totalExpensesAcrossTypes = transactions
     .filter(t => ['Click', 'Uzcard', 'Humo', 'Xarajat'].includes(t.category))
     .reduce((acc, curr) => acc + (curr.amount || 0), 0);
-  
-  // 3-kartochka: Kassa - (Click + Uzcard + Humo + Xarajat)
   const totalBalance = manualKassaSum - totalExpensesAcrossTypes;
+
+  // Stats for Xarajat sub-category
+  const currentSubCatExpenses = transactions
+    .filter(t => t.category === 'Xarajat' && t.sub_category === activeSubTab)
+    .reduce((acc, curr) => acc + (curr.amount || 0), 0);
+  const currentSubCatSavdo = activeSubTab ? (manualSavdoSums[activeSubTab] || 0) : 0;
+  const currentSubCatProfit = currentSubCatSavdo - currentSubCatExpenses;
 
   const filteredTransactions = transactions.filter(t => {
     if (activeTab === 'Xarajat') return t.category === 'Xarajat' && (activeSubTab ? t.sub_category === activeSubTab : true);
@@ -409,7 +429,7 @@ const XPro: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Statistika kartochkalari - Faqat Kassa bo'limida ko'rinadi */}
+          {/* Statistika kartochkalari - Kassa bo'limida */}
           {activeTab === 'Kassa' && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <StatCard 
@@ -429,6 +449,31 @@ const XPro: React.FC = () => {
                 label="Qolgan Pul (Balans)" 
                 val={totalBalance} 
                 icon={<Calculator />} 
+                color="indigo" 
+              />
+            </div>
+          )}
+
+          {/* Statistika kartochkalari - Xarajat bo'limida */}
+          {activeTab === 'Xarajat' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in slide-in-from-top-4 duration-500">
+              <StatCard 
+                label={`${activeSubTab || 'Tanlanmagan'} - Savdo`} 
+                val={currentSubCatSavdo} 
+                icon={<Coins />} 
+                color="green" 
+                onClick={handleSavdoSumClick}
+              />
+              <StatCard 
+                label={`${activeSubTab || 'Tanlanmagan'} - Umumiy Xarajat`} 
+                val={currentSubCatExpenses} 
+                icon={<TrendingDown />} 
+                color="red" 
+              />
+              <StatCard 
+                label={`${activeSubTab || 'Tanlanmagan'} - Foyda`} 
+                val={currentSubCatProfit} 
+                icon={<TrendingUp />} 
                 color="indigo" 
               />
             </div>
