@@ -7,6 +7,8 @@ export interface Shift {
   start_date: string;
   end_date?: string;
   status: 'active' | 'closed';
+  // Added to fix property access errors in components
+  manual_kassa_sum?: number;
 }
 
 export interface ExpenseCategory {

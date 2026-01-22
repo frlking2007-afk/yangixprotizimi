@@ -34,7 +34,6 @@ export const setDeletionPassword = async (newPassword: string): Promise<void> =>
   const user = await getUser();
   
   try {
-    // Eng sodda upsert: faqat kerakli ustunlar
     const { error } = await supabase
       .from('settings')
       .upsert({ 
@@ -147,6 +146,18 @@ export const startNewShift = async (): Promise<Shift | null> => {
   }
 };
 
+export const updateShiftManualSum = async (shiftId: string, sum: number): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('shifts')
+      .update({ manual_kassa_sum: sum })
+      .eq('id', shiftId);
+    if (error) throw error;
+  } catch (err) {
+    console.error("Update shift sum error:", err);
+  }
+};
+
 export const closeShift = async (shiftId: string): Promise<void> => {
   try {
     const { error } = await supabase
@@ -181,6 +192,38 @@ export const deleteShift = async (shiftId: string): Promise<void> => {
     if (error) throw error;
   } catch (err) {
     console.error("Delete shift error:", err);
+  }
+};
+
+// CATEGORY CONFIG FUNCTIONS (New)
+export const getCategoryConfigs = async (shiftId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('category_configs')
+      .select('*')
+      .eq('shift_id', shiftId);
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error("Get configs error:", err);
+    return [];
+  }
+};
+
+export const upsertCategoryConfig = async (shiftId: string, categoryName: string, config: { savdo_sum?: number, filters?: any }) => {
+  const user = await getUser();
+  try {
+    const { error } = await supabase
+      .from('category_configs')
+      .upsert({
+        user_id: user?.id,
+        shift_id: shiftId,
+        category_name: categoryName,
+        ...config
+      }, { onConflict: 'shift_id,category_name' });
+    if (error) throw error;
+  } catch (err) {
+    console.error("Upsert config error:", err);
   }
 };
 

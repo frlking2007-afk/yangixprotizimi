@@ -2,17 +2,10 @@
 import { GoogleGenAI } from "@google/genai";
 import { Transaction } from "../types";
 
-// Xavfsiz tashabbuskor (initialization)
-const getAIClient = () => {
-  const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : '';
-  if (!apiKey) return null;
-  return new GoogleGenAI({ apiKey });
-};
+// Always use a named parameter for apiKey and use it directly from process.env
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const getFinancialInsights = async (transactions: Transaction[]) => {
-  const ai = getAIClient();
-  if (!ai) return "AI tahlili uchun kalit topilmadi.";
-
   const summary = transactions.reduce((acc, curr) => {
     if (curr.type === 'kirim') acc.totalIn += (curr.amount || 0);
     else acc.totalOut += (curr.amount || 0);
@@ -36,6 +29,7 @@ export const getFinancialInsights = async (transactions: Transaction[]) => {
       model: 'gemini-3-flash-preview',
       contents: prompt,
     });
+    // The .text property is a getter, not a method
     return response.text || "Tahlil tayyor emas.";
   } catch (error) {
     console.error("AI insight error:", error);
