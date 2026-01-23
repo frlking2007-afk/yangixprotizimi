@@ -227,9 +227,18 @@ const Reports: React.FC = () => {
 
   // --- DETAILED VIEW ---
   if (selectedShiftId && selectedShift) {
-    const totalExpensesAcrossTypes = transactions
+    // Base expenses (Click, Uzcard, Humo, Xarajat transactions)
+    const baseExpenses = transactions
       .filter(t => ['Click', 'Uzcard', 'Humo', 'Xarajat'].includes(t.category))
       .reduce((acc, curr) => acc + (curr.amount || 0), 0);
+
+    // Profit addition logic for archive
+    const positiveProfitSum = expenseCategories.reduce((acc, cat) => {
+      const stats = calculateCatStats(cat.name);
+      return acc + (stats.balance > 0 ? stats.balance : 0);
+    }, 0);
+
+    const totalExpensesAcrossTypes = baseExpenses + positiveProfitSum;
     const totalBalance = (selectedShift.manual_kassa_sum || 0) - totalExpensesAcrossTypes;
 
     const currentCategoryTotal = transactions

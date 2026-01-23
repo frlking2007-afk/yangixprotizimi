@@ -362,9 +362,20 @@ const XPro: React.FC = () => {
     await upsertCategoryConfig(activeShift.id, activeSubTab, { filters: subTabFilters });
   };
 
-  const totalExpensesAcrossTypes = transactions
+  // Base expenses (Click, Uzcard, Humo, Xarajat transactions)
+  const baseExpenses = transactions
     .filter(t => ['Click', 'Uzcard', 'Humo', 'Xarajat'].includes(t.category))
     .reduce((acc, curr) => acc + (curr.amount || 0), 0);
+
+  // Profit addition logic: Sum Max(0, Profit) for each category
+  const positiveProfitSum = expenseCategories.reduce((acc, cat) => {
+    const stats = calculateCatStats(cat.name);
+    return acc + (stats.balance > 0 ? stats.balance : 0);
+  }, 0);
+
+  // Total Expenses = Base + Positive Profits
+  const totalExpensesAcrossTypes = baseExpenses + positiveProfitSum;
+  
   const totalBalance = manualKassaSum - totalExpensesAcrossTypes;
 
   // Calculate current category total
