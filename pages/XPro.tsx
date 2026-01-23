@@ -6,7 +6,7 @@ import {
   PlayCircle, RefreshCcw, 
   Edit2, X, Check, ArrowUpRight, ArrowDownRight, 
   Calculator, Download, Printer, Save, Loader2,
-  TrendingUp, Coins, Settings2
+  TrendingUp, Coins, Settings2, Calendar
 } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 import { Transaction, Shift, ExpenseCategory } from '../types.ts';
@@ -45,7 +45,6 @@ const StatCard = ({ label, val, icon, color, onClick }: { label: string, val: nu
 };
 
 const XPro: React.FC = () => {
-  // Simplified state type definition as manual_kassa_sum is now in the base Shift interface
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
@@ -56,23 +55,16 @@ const XPro: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('Kassa');
   const [activeSubTab, setActiveSubTab] = useState<string | null>(null);
   
-  // Kassa manual sum state
   const [manualKassaSum, setManualKassaSum] = useState<number>(0);
-  // Savdo manual sum state (Per sub-tab)
   const [manualSavdoSums, setManualSavdoSums] = useState<Record<string, number>>({});
-  
-  // Custom Filters for Xarajat Stat Card (Per sub-tab)
   const [allExpenseFilters, setAllExpenseFilters] = useState<Record<string, { xarajat: boolean, click: boolean, terminal: boolean }>>({});
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
-  // Default filters for new sub-tabs
   const defaultFilter = { xarajat: true, click: false, terminal: false };
 
-  // New Transaction Form State
   const [amountInput, setAmountInput] = useState('');
   const [descInput, setDescInput] = useState('');
 
-  // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState({ amount: '', description: '' });
 
@@ -90,17 +82,13 @@ const XPro: React.FC = () => {
       setExpenseCategories(categories || []);
       
       if (shift) {
-        // shift.manual_kassa_sum is now recognized by TypeScript
         setManualKassaSum(shift.manual_kassa_sum || 0);
-        
         const [trans, configs] = await Promise.all([
           getTransactionsByShift(shift.id),
           getCategoryConfigs(shift.id)
         ]);
-
         setTransactions(trans || []);
         
-        // Populate manualSavdoSums and allExpenseFilters from DB
         const sums: Record<string, number> = {};
         const filters: Record<string, any> = {};
         configs.forEach(cfg => {
@@ -115,15 +103,13 @@ const XPro: React.FC = () => {
         setActiveSubTab(categories[0].name);
       }
     } catch (err) {
-      console.error("Ma'lumotlarni yuklashda xato:", err);
+      console.error("Data fetch error:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    initData();
-  }, []);
+  useEffect(() => { initData(); }, []);
 
   const formatAmount = (val: string) => {
     const digits = val.replace(/\D/g, '');
@@ -138,6 +124,39 @@ const XPro: React.FC = () => {
     setEditData({ ...editData, amount: formatAmount(e.target.value) });
   };
 
+  const calculateCatStats = (catName: string) => {
+    const filters = allExpenseFilters[catName] || defaultFilter;
+    const savdo = manualSavdoSums[catName] || 0;
+    
+    const catExpenses = transactions
+      .filter(t => t.category === 'Xarajat' && t.sub_category === catName)
+      .reduce((acc, t) => acc + (t.amount || 0), 0);
+      
+    const clickSum = transactions
+      .filter(t => t.category === 'Click')
+      .reduce((acc, t) => acc + (t.amount || 0), 0);
+      
+    const terminalSum = transactions
+      .filter(t => t.category === 'Uzcard' || t.category === 'Humo')
+      .reduce((acc, t) => acc + (t.amount || 0), 0);
+      
+    let totalDeduction = 0;
+    if (filters.xarajat) totalDeduction += catExpenses;
+    if (filters.click) totalDeduction += clickSum;
+    if (filters.terminal) totalDeduction += terminalSum;
+    
+    return {
+      savdo,
+      catExpenses,
+      clickSum,
+      terminalSum,
+      totalDeduction,
+      balance: savdo - totalDeduction,
+      filters,
+      transactions: transactions.filter(t => t.category === 'Xarajat' && t.sub_category === catName)
+    };
+  };
+
   const handleKassaSumClick = async () => {
     const input = prompt("Kassa summasini kiriting:", manualKassaSum.toString());
     if (input === null) return;
@@ -145,9 +164,7 @@ const XPro: React.FC = () => {
     const num = parseFloat(cleanValue);
     if (!isNaN(num)) {
       setManualKassaSum(num);
-      if (activeShift) {
-        await updateShiftManualSum(activeShift.id, num);
-      }
+      if (activeShift) await updateShiftManualSum(activeShift.id, num);
     }
   };
 
@@ -165,184 +182,151 @@ const XPro: React.FC = () => {
     }
   };
 
-  const handleSaveTransaction = async () => {
+  const handleSaveTransaction = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!activeShift) return;
     const cleanAmount = amountInput.replace(/\s/g, '');
     const numAmount = parseFloat(cleanAmount);
-    
-    if (isNaN(numAmount) || numAmount <= 0) {
-      alert("Iltimos, summani to'g'ri kiriting");
-      return;
-    }
-
+    if (isNaN(numAmount) || numAmount <= 0) return alert("Summani to'g'ri kiriting");
     setIsSaving(true);
     try {
       const isExpense = activeTab === 'Xarajat';
-      const type = isExpense ? 'chiqim' : 'kirim';
-      
       await saveTransaction({
         shift_id: activeShift.id,
         amount: numAmount,
         category: activeTab,
         sub_category: isExpense ? activeSubTab || undefined : undefined,
         description: descInput,
-        type: type
+        type: isExpense ? 'chiqim' : 'kirim'
       });
-
-      setAmountInput('');
-      setDescInput('');
-      
+      setAmountInput(''); setDescInput('');
       const trans = await getTransactionsByShift(activeShift.id);
       setTransactions(trans || []);
-    } catch (err: any) {
-      alert("Xato: " + err.message);
-    } finally {
-      setIsSaving(false);
-    }
+    } catch (err: any) { alert("Xato: " + err.message); } finally { setIsSaving(false); }
   };
 
   const handleStartShift = async () => {
     try {
       const shift = await startNewShift();
-      if (shift) {
-        setActiveShift(shift);
-        setManualKassaSum(0);
-        setManualSavdoSums({});
-        setAllExpenseFilters({});
-      }
-    } catch (err: any) {
-      alert("Smena ochishda xatolik: " + (err.message || "Noma'lum"));
-    }
+      if (shift) setActiveShift(shift);
+    } catch (err: any) { alert("Xato: " + err.message); }
   };
 
   const handleAddCategory = async () => {
     const name = prompt("Yangi kategoriya:");
-    if (!name || name.trim() === '') return;
+    if (!name?.trim()) return;
     try {
       const newCat = await createExpenseCategory(name.trim());
       if (newCat) {
         setExpenseCategories([...expenseCategories, newCat]);
         setActiveSubTab(newCat.name);
       }
-    } catch (err: any) {
-      alert("Xato: " + err.message);
-    }
+    } catch (err: any) { alert("Xato: " + err.message); }
   };
 
   const handleEditCategoryName = async (e: React.MouseEvent, id: string, oldName: string) => {
     e.stopPropagation();
+    const password = prompt(`"${oldName}" tahrirlash paroli:`);
+    if (password === null) return;
+    if (password !== await getDeletionPassword()) return alert("Parol noto'g'ri!");
     const newName = prompt("Yangi nom:", oldName);
-    if (!newName || newName.trim() === '' || newName === oldName) return;
+    if (!newName?.trim() || newName === oldName) return;
     try {
       await updateExpenseCategory(id, newName.trim());
       setExpenseCategories(expenseCategories.map(c => c.id === id ? { ...c, name: newName.trim() } : c));
-      
-      // Note: We don't migrate configs here to keep it simple, 
-      // but in a production app you'd update category_name in category_configs too.
-      
       if (activeSubTab === oldName) setActiveSubTab(newName.trim());
-    } catch (err: any) {
-      alert("Xato: " + err.message);
-    }
+    } catch (err: any) { alert("Xato: " + err.message); }
   };
 
   const handleDeleteCategoryWithConfirmation = async (e: React.MouseEvent, id: string, name: string) => {
     e.stopPropagation();
     const password = prompt(`"${name}" o'chirish paroli:`);
     if (password === null) return;
-    try {
-      const correctPassword = await getDeletionPassword();
-      if (password !== correctPassword) {
-        alert("Parol noto'g'ri!");
-        return;
-      }
-      if (confirm(`"${name}" o'chirilsinmi?`)) {
-        await deleteExpenseCategory(id);
-        const updatedCats = expenseCategories.filter(c => c.id !== id);
-        setExpenseCategories(updatedCats);
-        if (activeSubTab === name) setActiveSubTab(updatedCats.length > 0 ? updatedCats[0].name : null);
-      }
-    } catch (err: any) {
-      alert("Xato: " + err.message);
+    if (password !== await getDeletionPassword()) return alert("Parol noto'g'ri!");
+    if (confirm(`"${name}" o'chirilsinmi?`)) {
+      await deleteExpenseCategory(id);
+      const updatedCats = expenseCategories.filter(c => c.id !== id);
+      setExpenseCategories(updatedCats);
+      if (activeSubTab === name) setActiveSubTab(updatedCats.length > 0 ? updatedCats[0].name : null);
     }
   };
 
-  const startEdit = (t: Transaction) => {
+  const startEdit = async (t: Transaction) => {
+    const password = prompt("Tahrirlash paroli:");
+    if (password === null) return;
+    if (password !== await getDeletionPassword()) return alert("Parol noto'g'ri!");
     setEditingId(t.id);
-    setEditData({
-      amount: (t.amount || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' '),
-      description: t.description || ''
-    });
+    setEditData({ amount: t.amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' '), description: t.description || '' });
   };
 
-  const saveEdit = async (id: string) => {
-    const cleanAmount = editData.amount.replace(/\s/g, '');
-    const numAmount = parseFloat(cleanAmount);
+  const saveEdit = async (e: React.FormEvent, id: string) => {
+    e.preventDefault();
+    const numAmount = parseFloat(editData.amount.replace(/\s/g, ''));
     if (isNaN(numAmount)) return;
     try {
       await updateTransaction(id, { amount: numAmount, description: editData.description });
       setEditingId(null);
-      if (activeShift) {
-        const trans = await getTransactionsByShift(activeShift.id);
-        setTransactions(trans || []);
-      }
-    } catch (err: any) {
-      alert("Xato: " + err.message);
-    }
+      if (activeShift) setTransactions(await getTransactionsByShift(activeShift.id) || []);
+    } catch (err: any) { alert("Xato: " + err.message); }
   };
 
   const handleDelete = async (id: string) => {
     const password = prompt("O'chirish paroli:");
     if (password === null) return;
-    try {
-      const correctPassword = await getDeletionPassword();
-      if (password !== correctPassword) {
-        alert("Parol noto'g'ri!");
-        return;
-      }
-      await deleteTransaction(id);
-      if (activeShift) {
-        const trans = await getTransactionsByShift(activeShift.id);
-        setTransactions(trans || []);
-      }
-    } catch (err: any) {
-      alert("Xato: " + err.message);
-    }
+    if (password !== await getDeletionPassword()) return alert("Parol noto'g'ri!");
+    await deleteTransaction(id);
+    if (activeShift) setTransactions(await getTransactionsByShift(activeShift.id) || []);
   };
 
   const handlePrint = (catName: string) => {
     if (!activeShift) return;
-    const catTransactions = transactions.filter(t => t.category === 'Xarajat' && t.sub_category === catName);
-    const total = catTransactions.reduce((acc, t) => acc + (t.amount || 0), 0);
+    const stats = calculateCatStats(catName);
     const now = new Date();
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
     printWindow.document.write(`
       <html>
         <head>
-          <title>XP-838l</title>
+          <title>Export - ${catName}</title>
           <style>
             @page { margin: 0; size: 80mm auto; }
-            body { font-family: 'Courier New', monospace; width: 72mm; margin: 0 auto; padding: 10px 0; font-size: 11pt; color: black; background: white; }
-            .center { text-align: center; } .bold { font-weight: bold; }
-            .header { font-size: 14pt; margin-bottom: 2px; }
-            .divider { border-top: 1px dashed black; margin: 6px 0; }
-            .row { display: flex; justify-content: space-between; margin-bottom: 3px; }
-            .desc { flex: 1; padding-right: 5px; }
-            .total { font-size: 12pt; margin-top: 8px; }
+            body { font-family: 'Inter', sans-serif; width: 72mm; margin: 0 auto; padding: 15px 0; font-size: 10pt; color: black; background: white; line-height: 1.4; }
+            .center { text-align: center; } .bold { font-weight: bold; } .black { font-weight: 900; }
+            .header { font-size: 16pt; margin-bottom: 5px; }
+            .divider { border-top: 1px dashed #ccc; margin: 10px 0; }
+            .row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+            .label { color: #666; font-size: 9pt; text-transform: uppercase; }
+            .list-title { font-size: 10pt; margin: 10px 0 5px 0; }
+            .item { font-size: 9pt; margin-bottom: 3px; border-bottom: 1px solid #f0f0f0; padding-bottom: 2px; }
+            .total-row { font-size: 11pt; margin-top: 10px; background: #f9f9f9; padding: 8px; border-radius: 5px; }
           </style>
         </head>
         <body>
-          <div class="center bold header">XPRO KASSA</div>
-          <div class="center">${activeShift.name}</div>
-          <div class="center bold">${catName.toUpperCase()}</div>
+          <div class="center black header">XPRO KASSA</div>
+          <div class="center bold">${now.toLocaleDateString()} ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+          <div class="center label" style="margin-bottom: 15px;">Smena: ${activeShift.name}</div>
+          
+          <div class="row"><span class="label">Nomi:</span><span class="bold">${catName}</span></div>
           <div class="divider"></div>
-          ${catTransactions.map(t => `<div class="row"><span class="desc">${t.description || 'Xarajat'}</span><span class="bold">${(t.amount || 0).toLocaleString()}</span></div>`).join('')}
+          
+          <div class="row"><span class="label">Savdo:</span><span class="bold">${stats.savdo.toLocaleString()}</span></div>
+          <div class="row"><span class="label">Xarajat:</span><span class="bold">${stats.catExpenses.toLocaleString()}</span></div>
+          ${stats.filters.click ? `<div class="row"><span class="label">Click:</span><span class="bold">${stats.clickSum.toLocaleString()}</span></div>` : ''}
+          ${stats.filters.terminal ? `<div class="row"><span class="label">Terminal:</span><span class="bold">${stats.terminalSum.toLocaleString()}</span></div>` : ''}
+          
           <div class="divider"></div>
-          <div class="row bold total"><span>JAMI:</span><span>${total.toLocaleString()} so'm</span></div>
+          <div class="row bold total-row"><span>QOLGAN PUL:</span><span>${stats.balance.toLocaleString()} so'm</span></div>
+          
           <div class="divider"></div>
-          <div class="center" style="font-size: 8pt; margin-top: 10px;">${now.toLocaleString()}</div>
-          <div style="height: 40px;"></div>
+          <div class="bold list-title">XARAJATLAR RO'YXATI:</div>
+          ${stats.transactions.map(t => `
+            <div class="item">
+              <div class="row"><span>${t.description || 'Xarajat'}</span><span class="bold">${t.amount.toLocaleString()}</span></div>
+            </div>
+          `).join('')}
+          
+          <div class="center" style="font-size: 8pt; margin-top: 20px; color: #999;">Dastur orqali yaratildi - Xpro</div>
+          <div style="height: 50px;"></div>
           <script>window.onload=function(){window.print();setTimeout(function(){window.close();},500);};</script>
         </body>
       </html>
@@ -350,65 +334,33 @@ const XPro: React.FC = () => {
     printWindow.document.close();
   };
 
-  const handleDownloadImage = async (catId: string) => {
-    const el = exportRefs.current[catId];
+  const handleDownloadImage = async (catName: string) => {
+    const el = exportRefs.current[catName];
     if (!el) return;
     setIsExporting(true);
     try {
-      const dataUrl = await htmlToImage.toPng(el, { cacheBust: true, backgroundColor: '#fff' });
+      const dataUrl = await htmlToImage.toPng(el, { cacheBust: true, backgroundColor: '#fff', pixelRatio: 2 });
       const link = document.createElement('a');
-      link.download = `hisobot-${catId.toLowerCase()}.png`;
+      link.download = `xisobot-${catName.toLowerCase()}-${new Date().toISOString().slice(0,10)}.png`;
       link.href = dataUrl;
       link.click();
-    } catch (err) { alert('Xatolik yuz berdi.'); } finally { setIsExporting(false); }
+    } catch (err) { alert('Rasm yuklashda xatolik.'); } finally { setIsExporting(false); }
   };
-
-  // Current sub-tab filters
-  const currentFilters = activeSubTab ? (allExpenseFilters[activeSubTab] || defaultFilter) : defaultFilter;
 
   const toggleFilter = async (key: keyof typeof defaultFilter) => {
     if (!activeSubTab || !activeShift) return;
-    const newFilters = { ...allExpenseFilters };
-    const subTabFilters = { ...currentFilters };
+    const subTabFilters = { ...(allExpenseFilters[activeSubTab] || defaultFilter) };
     subTabFilters[key] = !subTabFilters[key];
-    newFilters[activeSubTab] = subTabFilters;
-    setAllExpenseFilters(newFilters);
-    
+    setAllExpenseFilters({ ...allExpenseFilters, [activeSubTab]: subTabFilters });
     await upsertCategoryConfig(activeShift.id, activeSubTab, { filters: subTabFilters });
   };
 
-  // Stats for Kassa tab
   const totalExpensesAcrossTypes = transactions
     .filter(t => ['Click', 'Uzcard', 'Humo', 'Xarajat'].includes(t.category))
     .reduce((acc, curr) => acc + (curr.amount || 0), 0);
   const totalBalance = manualKassaSum - totalExpensesAcrossTypes;
 
-  // Stats for Xarajat sub-category (Based on current sub-tab's filters)
-  const calculateConfiguredExpenses = () => {
-    if (!activeSubTab) return 0;
-    let total = 0;
-    if (currentFilters.xarajat) {
-      total += transactions
-        .filter(t => t.category === 'Xarajat' && t.sub_category === activeSubTab)
-        .reduce((acc, curr) => acc + (curr.amount || 0), 0);
-    }
-    if (currentFilters.click) {
-      total += transactions
-        .filter(t => t.category === 'Click')
-        .reduce((acc, curr) => acc + (curr.amount || 0), 0);
-    }
-    if (currentFilters.terminal) {
-      total += transactions
-        .filter(t => t.category === 'Uzcard' || t.category === 'Humo')
-        .reduce((acc, curr) => acc + (curr.amount || 0), 0);
-    }
-    return total;
-  };
-
-  const currentSubCatExpenses = calculateConfiguredExpenses();
-  const currentSubCatSavdo = activeSubTab ? (manualSavdoSums[activeSubTab] || 0) : 0;
-  const currentSubCatProfit = currentSubCatSavdo - currentSubCatExpenses;
-
+  const currentFilters = activeSubTab ? (allExpenseFilters[activeSubTab] || defaultFilter) : defaultFilter;
   const filteredTransactions = transactions.filter(t => {
     if (activeTab === 'Xarajat') return t.category === 'Xarajat' && (activeSubTab ? t.sub_category === activeSubTab : true);
     return t.category === activeTab;
@@ -419,30 +371,26 @@ const XPro: React.FC = () => {
     { name: 'Humo', icon: CreditCard }, { name: 'Xarajat', icon: TrendingDown }, { name: 'Eksport', icon: Download },
   ];
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-96 space-y-4">
-        <RefreshCcw className="animate-spin text-indigo-600" size={40} />
-        <p className="text-slate-500 font-medium">Yuklanmoqda...</p>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center h-96 space-y-4">
+      <RefreshCcw className="animate-spin text-indigo-600" size={40} />
+      <p className="text-slate-500 font-medium">Yuklanmoqda...</p>
+    </div>
+  );
 
-  if (!activeShift) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[70vh] text-center px-4">
-        <PlayCircle size={48} className="text-indigo-600 mb-6 animate-pulse" />
-        <h2 className="text-3xl font-black text-slate-800 dark:text-white mb-3">Xush kelibsiz!</h2>
-        <button onClick={handleStartShift} className="px-10 py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-xl flex items-center gap-3">
-          <PlayCircle size={24} /> Hisobotni boshlash
-        </button>
-      </div>
-    );
-  }
+  if (!activeShift) return (
+    <div className="flex flex-col items-center justify-center h-[70vh] text-center px-4">
+      <PlayCircle size={48} className="text-indigo-600 mb-6 animate-pulse" />
+      <h2 className="text-3xl font-black text-slate-800 dark:text-white mb-3">Xush kelibsiz!</h2>
+      <button onClick={handleStartShift} className="px-10 py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-xl flex items-center gap-3">
+        <PlayCircle size={24} /> Hisobotni boshlash
+      </button>
+    </div>
+  );
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20 no-print">
-      {/* Settings Modal for Expense Filter (Per sub-tab) */}
+      {/* Settings Modal */}
       {isFilterModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 hacker:bg-black w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 dark:border-slate-800 space-y-6">
@@ -453,54 +401,23 @@ const XPro: React.FC = () => {
               </div>
               <button onClick={() => setIsFilterModalOpen(false)} className="p-2 text-slate-400 hover:bg-slate-50 rounded-full transition-colors"><X size={20} /></button>
             </div>
-            
             <div className="space-y-3">
-              <label className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all">
-                <input 
-                  type="checkbox" 
-                  checked={currentFilters.xarajat} 
-                  onChange={() => toggleFilter('xarajat')}
-                  className="w-6 h-6 rounded-lg text-indigo-600 focus:ring-indigo-500 border-slate-300"
-                />
-                <div className="flex-1">
-                  <p className="font-bold text-slate-800 dark:text-white hacker:text-[#0f0]">Xarajatlarni hisoblash</p>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Faqat {activeSubTab} chiqimlari</p>
-                </div>
-              </label>
-
-              <label className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all">
-                <input 
-                  type="checkbox" 
-                  checked={currentFilters.click} 
-                  onChange={() => toggleFilter('click')}
-                  className="w-6 h-6 rounded-lg text-indigo-600 focus:ring-indigo-500 border-slate-300"
-                />
-                <div className="flex-1">
-                  <p className="font-bold text-slate-800 dark:text-white hacker:text-[#0f0]">Clicklarni hisoblash</p>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Shift'dagi barcha clicklar</p>
-                </div>
-              </label>
-
-              <label className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all">
-                <input 
-                  type="checkbox" 
-                  checked={currentFilters.terminal} 
-                  onChange={() => toggleFilter('terminal')}
-                  className="w-6 h-6 rounded-lg text-indigo-600 focus:ring-indigo-500 border-slate-300"
-                />
-                <div className="flex-1">
-                  <p className="font-bold text-slate-800 dark:text-white hacker:text-[#0f0]">Terminalni hisoblash</p>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Uzcard va Humo summasi</p>
-                </div>
-              </label>
+              {['xarajat', 'click', 'terminal'].map((key) => (
+                <label key={key} className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all">
+                  <input 
+                    type="checkbox" 
+                    checked={currentFilters[key as keyof typeof defaultFilter]} 
+                    onChange={() => toggleFilter(key as keyof typeof defaultFilter)}
+                    className="w-6 h-6 rounded-lg text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                  />
+                  <div className="flex-1">
+                    <p className="font-bold text-slate-800 dark:text-white capitalize">{key}ni hisoblash</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{key === 'xarajat' ? `Faqat ${activeSubTab} chiqimlari` : key === 'click' ? "Barcha clicklar" : "Uzcard va Humo"}</p>
+                  </div>
+                </label>
+              ))}
             </div>
-
-            <button 
-              onClick={() => setIsFilterModalOpen(false)}
-              className="w-full py-4 bg-slate-900 dark:bg-indigo-600 text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all"
-            >
-              Tayyor
-            </button>
+            <button onClick={() => setIsFilterModalOpen(false)} className="w-full py-4 bg-slate-900 dark:bg-indigo-600 text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all">Tayyor</button>
           </div>
         </div>
       )}
@@ -519,11 +436,8 @@ const XPro: React.FC = () => {
             key={tab.name}
             onClick={() => {
               setActiveTab(tab.name);
-              if (tab.name === 'Xarajat' && expenseCategories.length > 0) {
-                if (!activeSubTab) setActiveSubTab(expenseCategories[0].name);
-              } else if (tab.name !== 'Eksport') {
-                setActiveSubTab(null);
-              }
+              if (tab.name === 'Xarajat' && expenseCategories.length > 0 && !activeSubTab) setActiveSubTab(expenseCategories[0].name);
+              else if (tab.name !== 'Xarajat' && tab.name !== 'Eksport') setActiveSubTab(null);
             }}
             className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold transition-all border text-sm ${
               activeTab === tab.name ? 'bg-slate-900 text-white border-slate-900' : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-100 dark:border-slate-800'
@@ -536,24 +450,80 @@ const XPro: React.FC = () => {
 
       {activeTab === 'Eksport' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {expenseCategories.map(cat => (
-            <div key={cat.id} className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
-              <div ref={(el) => { exportRefs.current[cat.name] = el; }} className="p-6">
-                 <h4 className="font-black text-slate-800 dark:text-white text-lg">{cat.name}</h4>
-                 <p className="text-[10px] font-bold text-slate-400 uppercase">Smena Hisoboti</p>
+          {expenseCategories.map(cat => {
+            const stats = calculateCatStats(cat.name);
+            const now = new Date();
+            return (
+              <div key={cat.id} className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col group">
+                {/* Visual Preview */}
+                <div ref={(el) => { exportRefs.current[cat.name] = el; }} className="p-8 bg-white text-slate-900">
+                   <div className="text-center mb-6">
+                      <h4 className="font-black text-2xl tracking-tighter text-black uppercase">XPRO KASSA</h4>
+                      <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 font-bold mt-1">
+                        <Calendar size={10} /> {now.toLocaleDateString()} <Clock size={10} className="ml-1" /> {now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </div>
+                   </div>
+
+                   <div className="space-y-3 mb-6">
+                      <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nomi</span>
+                         <span className="font-black text-black">{cat.name}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Savdo</span>
+                         <span className="font-bold">{stats.savdo.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Xarajat</span>
+                         <span className="font-bold text-red-500">{stats.catExpenses.toLocaleString()}</span>
+                      </div>
+                      {stats.filters.click && (
+                        <div className="flex justify-between items-center">
+                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Click</span>
+                           <span className="font-bold text-indigo-600">{stats.clickSum.toLocaleString()}</span>
+                        </div>
+                      )}
+                      {stats.filters.terminal && (
+                        <div className="flex justify-between items-center">
+                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Terminal</span>
+                           <span className="font-bold text-indigo-600">{stats.terminalSum.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="pt-3 border-t-2 border-dashed border-slate-100 mt-4">
+                         <div className="flex justify-between items-center p-3 bg-slate-50 rounded-2xl">
+                            <span className="text-xs font-black text-black uppercase">Qolgan Pul</span>
+                            <span className="text-lg font-black text-black">{stats.balance.toLocaleString()} so'm</span>
+                         </div>
+                      </div>
+                   </div>
+
+                   <div className="space-y-1">
+                      <p className="text-[10px] font-black text-black uppercase mb-2 border-b-2 border-black inline-block">Xarajatlar Ro'yxati:</p>
+                      {stats.transactions.length > 0 ? (
+                        stats.transactions.map(t => (
+                          <div key={t.id} className="flex justify-between text-[11px] py-1 border-b border-slate-50">
+                             <span className="font-medium text-slate-600">{t.description || 'Xarajat'}</span>
+                             <span className="font-bold">{t.amount.toLocaleString()}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-[10px] italic text-slate-400">Ro'yxat bo'sh</p>
+                      )}
+                   </div>
+                </div>
+                {/* Actions */}
+                <div className="bg-slate-50 dark:bg-slate-800/50 p-6 flex gap-3 border-t border-slate-100 dark:border-slate-800 mt-auto">
+                  <button onClick={() => handlePrint(cat.name)} className="flex-1 py-4 bg-white dark:bg-slate-900 border dark:border-slate-700 rounded-2xl flex items-center justify-center gap-2 text-xs font-black hover:bg-slate-100 transition-all"><Printer size={16} /> Chop etish</button>
+                  <button onClick={() => handleDownloadImage(cat.name)} disabled={isExporting} className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl flex items-center justify-center gap-2 text-xs font-black disabled:opacity-50 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 dark:shadow-none">
+                     {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} Rasm
+                  </button>
+                </div>
               </div>
-              <div className="bg-slate-50 dark:bg-slate-800/50 p-4 flex gap-2 border-t">
-                <button onClick={() => handlePrint(cat.name)} className="flex-1 py-3 bg-white border rounded-xl flex items-center justify-center gap-2 text-xs font-bold"><Printer size={14} /> Chop etish</button>
-                <button onClick={() => handleDownloadImage(cat.name)} disabled={isExporting} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl flex items-center justify-center gap-2 text-xs font-bold disabled:opacity-50">
-                   {isExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Rasm
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="space-y-6">
-          {/* 1. Xarajat bo'limida SUB-KATEGORIYALAR */}
           {activeTab === 'Xarajat' && (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 animate-in slide-in-from-top-2 duration-300">
               {expenseCategories.map(cat => (
@@ -569,159 +539,78 @@ const XPro: React.FC = () => {
             </div>
           )}
 
-          {/* 2. STATISTIKA KARTALARI - Kassa bo'limida */}
           {activeTab === 'Kassa' && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <StatCard 
-                label="Kassa Summasi (O'zgartirish uchun bosing)" 
-                val={manualKassaSum} 
-                icon={<ArrowUpRight />} 
-                color="green" 
-                onClick={handleKassaSumClick}
-              />
-              <StatCard 
-                label="Umumiy Xarajat (Click+Uzcard+Humo+Xarajat)" 
-                val={totalExpensesAcrossTypes} 
-                icon={<ArrowDownRight />} 
-                color="red" 
-              />
-              <StatCard 
-                label="Qolgan Pul (Balans)" 
-                val={totalBalance} 
-                icon={<Calculator />} 
-                color="indigo" 
-              />
+              <StatCard label="Kassa Summasi" val={manualKassaSum} icon={<ArrowUpRight />} color="green" onClick={handleKassaSumClick} />
+              <StatCard label="Umumiy Xarajat" val={totalExpensesAcrossTypes} icon={<ArrowDownRight />} color="red" />
+              <StatCard label="Balans" val={totalBalance} icon={<Calculator />} color="indigo" />
             </div>
           )}
 
-          {/* 3. YANGI OPERATSIYA FORMASI */}
           {activeTab !== 'Kassa' && (
-            <div className="bg-white dark:bg-slate-900 hacker:bg-black p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-4 animate-in fade-in duration-300">
+            <form onSubmit={handleSaveTransaction} className="bg-white dark:bg-slate-900 hacker:bg-black p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-4 animate-in fade-in duration-300">
                <div className="flex items-center gap-2 mb-2">
                   <Plus size={18} className="text-indigo-600" />
-                  <h4 className="font-bold text-sm uppercase tracking-widest text-slate-800 dark:text-white hacker:text-[#0f0]">Yangi operatsiya ({activeTab})</h4>
+                  <h4 className="font-bold text-sm uppercase tracking-widest text-slate-800 dark:text-white">Yangi operatsiya ({activeTab})</h4>
                </div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Summa</label>
-                     <input 
-                      type="text" 
-                      value={amountInput}
-                      onChange={handleAmountChange}
-                      placeholder="0"
-                      className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl outline-none font-black text-lg dark:text-white hacker:text-[#0f0]"
-                     />
-                  </div>
-                  <div>
-                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Tavsif (Ixtiyoriy)</label>
-                     <input 
-                      type="text" 
-                      value={descInput}
-                      onChange={(e) => setDescInput(e.target.value)}
-                      placeholder="Operatsiya haqida..."
-                      className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl outline-none font-medium dark:text-white hacker:text-[#0f0]"
-                     />
-                  </div>
+                  <input type="text" value={amountInput} onChange={handleAmountChange} placeholder="Summa (0)" className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl outline-none font-black text-lg dark:text-white" />
+                  <input type="text" value={descInput} onChange={(e) => setDescInput(e.target.value)} placeholder="Tavsif (ixtiyoriy)" className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl outline-none font-medium dark:text-white" />
                </div>
-               <button 
-                 onClick={handleSaveTransaction}
-                 disabled={isSaving}
-                 className="w-full py-4 bg-slate-900 dark:bg-indigo-600 text-white font-black rounded-2xl flex items-center justify-center gap-3 hover:bg-black transition-all shadow-lg active:scale-[0.98] disabled:opacity-50"
-               >
-                  {isSaving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
-                  Saqlash
+               <button type="submit" disabled={isSaving} className="w-full py-4 bg-slate-900 dark:bg-indigo-600 text-white font-black rounded-2xl flex items-center justify-center gap-3 hover:bg-black transition-all disabled:opacity-50">
+                  {isSaving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />} Saqlash
                </button>
+            </form>
+          )}
+
+          {activeTab === 'Xarajat' && activeSubTab && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in duration-500">
+              {(() => {
+                const stats = calculateCatStats(activeSubTab);
+                return (
+                  <>
+                    <StatCard label={`${activeSubTab} - Savdo`} val={stats.savdo} icon={<Coins />} color="green" onClick={handleSavdoSumClick} />
+                    <StatCard label={`${activeSubTab} - Hisoblangan Xarajat`} val={stats.totalDeduction} icon={<Settings2 />} color="red" onClick={() => setIsFilterModalOpen(true)} />
+                    <StatCard label={`${activeSubTab} - Foyda`} val={stats.balance} icon={<TrendingUp />} color="indigo" />
+                  </>
+                );
+              })()}
             </div>
           )}
 
-          {/* 4. STATISTIKA KARTALARI - Xarajat bo'limida */}
-          {activeTab === 'Xarajat' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <StatCard 
-                label={`${activeSubTab || 'Tanlanmagan'} - Savdo`} 
-                val={currentSubCatSavdo} 
-                icon={<Coins />} 
-                color="green" 
-                onClick={handleSavdoSumClick}
-              />
-              <StatCard 
-                label={`${activeSubTab || 'Tanlanmagan'} - Umumiy Xarajat`} 
-                val={currentSubCatExpenses} 
-                icon={<Settings2 />} 
-                color="red" 
-                onClick={() => setIsFilterModalOpen(true)}
-              />
-              <StatCard 
-                label={`${activeSubTab || 'Tanlanmagan'} - Foyda`} 
-                val={currentSubCatProfit} 
-                icon={<TrendingUp />} 
-                color="indigo" 
-              />
-            </div>
-          )}
-
-          {/* 5. TRANZAKSIYALAR RO'YXATI */}
           {activeTab !== 'Kassa' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between px-2">
-                <h3 className="font-bold text-slate-800 dark:text-white text-sm uppercase tracking-widest hacker:text-[#0f0]">Amallar</h3>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hacker:text-[#0f0]">{filteredTransactions.length} ta</span>
+                <h3 className="font-bold text-slate-800 dark:text-white text-sm uppercase tracking-widest">Amallar ({filteredTransactions.length})</h3>
               </div>
               <div className="space-y-2.5">
                 {filteredTransactions.map((t) => (
-                  <div key={t.id} className="bg-white dark:bg-slate-900 hacker:bg-black p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm group">
+                  <div key={t.id} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm group">
                     {editingId === t.id ? (
-                      <div className="space-y-4 animate-in fade-in duration-300">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1 ml-1">Summa</label>
-                            <input 
-                              value={editData.amount} 
-                              onChange={handleEditAmountChange} 
-                              className="w-full p-3 bg-slate-50 dark:bg-slate-800 hacker:bg-black border border-slate-200 dark:border-slate-700 hacker:border-[#0f0] rounded-xl text-sm font-bold dark:text-white hacker:text-[#0f0] outline-none focus:ring-1 focus:ring-indigo-500" 
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1 ml-1">Tavsif</label>
-                            <input 
-                              value={editData.description} 
-                              onChange={(e) => setEditData({...editData, description: e.target.value})} 
-                              className="w-full p-3 bg-slate-50 dark:bg-slate-800 hacker:bg-black border border-slate-200 dark:border-slate-700 hacker:border-[#0f0] rounded-xl text-sm font-medium dark:text-white hacker:text-[#0f0] outline-none focus:ring-1 focus:ring-indigo-500" 
-                            />
-                          </div>
+                      <form onSubmit={(e) => saveEdit(e, t.id)} className="space-y-4">
+                        <div className="grid grid-cols-2 gap-3">
+                          <input value={editData.amount} onChange={handleEditAmountChange} className="w-full p-3 bg-slate-50 dark:bg-slate-800 border rounded-xl text-sm font-bold" />
+                          <input value={editData.description} onChange={(e) => setEditData({...editData, description: e.target.value})} className="w-full p-3 bg-slate-50 dark:bg-slate-800 border rounded-xl text-sm font-medium" />
                         </div>
-                        <div className="flex justify-end gap-3 pt-1">
-                          <button 
-                            onClick={() => setEditingId(null)} 
-                            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400"
-                          >
-                            <X size={14} /> Bekor qilish
-                          </button>
-                          <button 
-                            onClick={() => saveEdit(t.id)} 
-                            className="flex items-center gap-2 px-5 py-2 bg-green-600 text-white text-xs font-bold rounded-xl shadow-md active:scale-95"
-                          >
-                            <Check size={14} /> Saqlash
-                          </button>
+                        <div className="flex justify-end gap-3">
+                          <button type="button" onClick={() => setEditingId(null)} className="text-xs font-bold text-slate-500">Bekor qilish</button>
+                          <button type="submit" className="px-5 py-2 bg-green-600 text-white text-xs font-bold rounded-xl">Saqlash</button>
                         </div>
-                      </div>
+                      </form>
                     ) : (
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t.type === 'kirim' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{t.type === 'kirim' ? <Plus size={18} /> : <TrendingDown size={18} />}</div>
-                          <div><p className="font-bold text-slate-800 dark:text-white hacker:text-[#0f0] text-[13px]">{t.description || 'Tavsifsiz'}</p><p className="text-[10px] text-slate-400 uppercase font-bold hacker:text-[#0f0]/60">{t.sub_category || t.category}</p></div>
+                          <div><p className="font-bold text-slate-800 dark:text-white text-[13px]">{t.description || 'Tavsifsiz'}</p><p className="text-[10px] text-slate-400 uppercase font-bold">{t.sub_category || t.category}</p></div>
                         </div>
-                        <div className="flex items-center gap-4 text-right">
-                          <p className={`font-black text-sm ${t.type === 'kirim' ? 'text-green-600' : 'text-red-500'} hacker:text-[#0f0]`}>{(t.amount || 0).toLocaleString()}</p>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all"><button onClick={() => startEdit(t)} className="p-1 text-slate-400 hacker:text-[#0f0]"><Edit2 size={14} /></button><button onClick={() => handleDelete(t.id)} className="p-1 text-slate-400 hacker:text-[#0f0]"><Trash2 size={14} /></button></div>
+                        <div className="flex items-center gap-4">
+                          <p className={`font-black text-sm ${t.type === 'kirim' ? 'text-green-600' : 'text-red-500'}`}>{(t.amount || 0).toLocaleString()}</p>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all"><button onClick={() => startEdit(t)} className="p-1 text-slate-400"><Edit2 size={14} /></button><button onClick={() => handleDelete(t.id)} className="p-1 text-slate-400"><Trash2 size={14} /></button></div>
                         </div>
                       </div>
                     )}
                   </div>
                 ))}
-                {filteredTransactions.length === 0 && (
-                  <div className="text-center py-10 text-slate-400 italic text-sm hacker:text-[#0f0]/40">Ushbu bo'limda amallar mavjud emas</div>
-                )}
               </div>
             </div>
           )}
