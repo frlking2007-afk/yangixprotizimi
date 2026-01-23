@@ -232,6 +232,10 @@ const Reports: React.FC = () => {
       .reduce((acc, curr) => acc + (curr.amount || 0), 0);
     const totalBalance = (selectedShift.manual_kassa_sum || 0) - totalExpensesAcrossTypes;
 
+    const currentCategoryTotal = transactions
+      .filter(t => t.category === activeTab)
+      .reduce((acc, curr) => acc + (curr.amount || 0), 0);
+
     const mainTabs = [
       { name: 'Kassa', icon: Banknote }, { name: 'Click', icon: CreditCard }, { name: 'Uzcard', icon: Wallet },
       { name: 'Humo', icon: CreditCard }, { name: 'Xarajat', icon: TrendingDown }, { name: 'Eksport', icon: Download },
@@ -336,6 +340,18 @@ const Reports: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-6">
+            {/* Category Total for archived shift */}
+            {['Click', 'Uzcard', 'Humo', 'Xarajat'].includes(activeTab) && (
+              <div className="grid grid-cols-1 gap-4">
+                <StatCard 
+                  label={`Arxiv ${activeTab} Umumiy Summasi`} 
+                  val={currentCategoryTotal} 
+                  icon={activeTab === 'Xarajat' ? <TrendingDown /> : <ArrowUpRight />} 
+                  color={activeTab === 'Xarajat' ? 'red' : 'green'} 
+                />
+              </div>
+            )}
+
             {activeTab === 'Xarajat' && (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
                 {expenseCategories.map(cat => (

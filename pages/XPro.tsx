@@ -367,6 +367,11 @@ const XPro: React.FC = () => {
     .reduce((acc, curr) => acc + (curr.amount || 0), 0);
   const totalBalance = manualKassaSum - totalExpensesAcrossTypes;
 
+  // Calculate current category total
+  const currentCategoryTotal = transactions
+    .filter(t => t.category === activeTab)
+    .reduce((acc, curr) => acc + (curr.amount || 0), 0);
+
   const currentFilters = activeSubTab ? (allExpenseFilters[activeSubTab] || defaultFilter) : defaultFilter;
   const filteredTransactions = transactions.filter(t => {
     if (activeTab === 'Xarajat') return t.category === 'Xarajat' && (activeSubTab ? t.sub_category === activeSubTab : true);
@@ -551,6 +556,18 @@ const XPro: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-6">
+          {/* Summary Stat for Click, Uzcard, Humo, Xarajat */}
+          {['Click', 'Uzcard', 'Humo', 'Xarajat'].includes(activeTab) && (
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-4 animate-in slide-in-from-top-2 duration-300">
+              <StatCard 
+                label={`Umumiy ${activeTab} Summasi`} 
+                val={currentCategoryTotal} 
+                icon={activeTab === 'Xarajat' ? <TrendingDown /> : <ArrowUpRight />} 
+                color={activeTab === 'Xarajat' ? 'red' : 'green'} 
+              />
+            </div>
+          )}
+
           {activeTab === 'Xarajat' && (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 animate-in slide-in-from-top-2 duration-300">
               {expenseCategories.map(cat => (
@@ -569,7 +586,7 @@ const XPro: React.FC = () => {
           {activeTab === 'Kassa' && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <StatCard label="Kassa Summasi" val={manualKassaSum} icon={<ArrowUpRight />} color="green" onClick={handleKassaSumClick} />
-              <StatCard label="Umumiy Xarajat" val={totalExpensesAcrossTypes} icon={<ArrowDownRight />} color="red" />
+              <StatCard label="Umumiy Chiqim" val={totalExpensesAcrossTypes} icon={<ArrowDownRight />} color="red" />
               <StatCard label="Balans" val={totalBalance} icon={<Calculator />} color="indigo" />
             </div>
           )}
