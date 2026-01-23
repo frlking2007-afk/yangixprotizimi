@@ -50,7 +50,7 @@ const XPro: React.FC = () => {
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
+  const [exportingId, setExportingId] = useState<string | null>(null);
   
   const [activeTab, setActiveTab] = useState<string>('Kassa');
   const [activeSubTab, setActiveSubTab] = useState<string | null>(null);
@@ -293,39 +293,39 @@ const XPro: React.FC = () => {
             body { font-family: 'Inter', sans-serif; width: 72mm; margin: 0 auto; padding: 15px 0; font-size: 10pt; color: black; background: white; line-height: 1.4; }
             .center { text-align: center; } .bold { font-weight: bold; } .black { font-weight: 900; }
             .header { font-size: 16pt; margin-bottom: 5px; }
-            .divider { border-top: 1px dashed #ccc; margin: 10px 0; }
+            .divider { border-top: 1.5px dashed black; margin: 10px 0; }
             .row { display: flex; justify-content: space-between; margin-bottom: 5px; }
-            .label { color: #666; font-size: 9pt; text-transform: uppercase; }
-            .list-title { font-size: 10pt; margin: 10px 0 5px 0; }
-            .item { font-size: 9pt; margin-bottom: 3px; border-bottom: 1px solid #f0f0f0; padding-bottom: 2px; }
-            .total-row { font-size: 11pt; margin-top: 10px; background: #f9f9f9; padding: 8px; border-radius: 5px; }
+            .label { color: black; font-size: 9pt; text-transform: uppercase; font-weight: 900; }
+            .list-title { font-size: 10pt; margin: 10px 0 5px 0; font-weight: 900; }
+            .item { font-size: 9pt; margin-bottom: 3px; border-bottom: 1px solid #eee; padding-bottom: 2px; }
+            .total-row { font-size: 12pt; margin-top: 10px; background: #f0f0f0; padding: 8px; border-radius: 5px; border: 1px solid black; }
           </style>
         </head>
         <body>
           <div class="center black header">XPRO KASSA</div>
           <div class="center bold">${now.toLocaleDateString()} ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-          <div class="center label" style="margin-bottom: 15px;">Smena: ${activeShift.name}</div>
+          <div class="center bold" style="margin-bottom: 15px; font-size: 9pt;">${activeShift.name}</div>
           
-          <div class="row"><span class="label">Nomi:</span><span class="bold">${catName}</span></div>
+          <div class="row"><span class="label">Nomi:</span><span class="black">${catName}</span></div>
           <div class="divider"></div>
           
-          <div class="row"><span class="label">Savdo:</span><span class="bold">${stats.savdo.toLocaleString()}</span></div>
-          <div class="row"><span class="label">Xarajat:</span><span class="bold">${stats.catExpenses.toLocaleString()}</span></div>
-          ${stats.filters.click ? `<div class="row"><span class="label">Click:</span><span class="bold">${stats.clickSum.toLocaleString()}</span></div>` : ''}
-          ${stats.filters.terminal ? `<div class="row"><span class="label">Terminal:</span><span class="bold">${stats.terminalSum.toLocaleString()}</span></div>` : ''}
+          <div class="row"><span class="label">Savdo:</span><span class="black">${stats.savdo.toLocaleString()}</span></div>
+          <div class="row"><span class="label">Xarajat:</span><span class="black">${stats.catExpenses.toLocaleString()}</span></div>
+          ${stats.filters.click ? `<div class="row"><span class="label">Click:</span><span class="black">${stats.clickSum.toLocaleString()}</span></div>` : ''}
+          ${stats.filters.terminal ? `<div class="row"><span class="label">Terminal:</span><span class="black">${stats.terminalSum.toLocaleString()}</span></div>` : ''}
           
           <div class="divider"></div>
-          <div class="row bold total-row"><span>QOLGAN PUL:</span><span>${stats.balance.toLocaleString()} so'm</span></div>
+          <div class="row black total-row"><span>QOLGAN PUL:</span><span>${stats.balance.toLocaleString()} so'm</span></div>
           
           <div class="divider"></div>
-          <div class="bold list-title">XARAJATLAR RO'YXATI:</div>
+          <div class="black list-title">XARAJATLAR RO'YXATI:</div>
           ${stats.transactions.map(t => `
             <div class="item">
               <div class="row"><span>${t.description || 'Xarajat'}</span><span class="bold">${t.amount.toLocaleString()}</span></div>
             </div>
           `).join('')}
           
-          <div class="center" style="font-size: 8pt; margin-top: 20px; color: #999;">Dastur orqali yaratildi - Xpro</div>
+          <div class="center" style="font-size: 8pt; margin-top: 20px; color: #555; font-weight: bold;">Dastur orqali yaratildi - Xpro</div>
           <div style="height: 50px;"></div>
           <script>window.onload=function(){window.print();setTimeout(function(){window.close();},500);};</script>
         </body>
@@ -337,14 +337,21 @@ const XPro: React.FC = () => {
   const handleDownloadImage = async (catName: string) => {
     const el = exportRefs.current[catName];
     if (!el) return;
-    setIsExporting(true);
+    setExportingId(catName);
     try {
-      const dataUrl = await htmlToImage.toPng(el, { cacheBust: true, backgroundColor: '#fff', pixelRatio: 2 });
+      const dataUrl = await htmlToImage.toPng(el, { 
+        cacheBust: true, 
+        backgroundColor: '#fff', 
+        pixelRatio: 3,
+        style: {
+          borderRadius: '0'
+        }
+      });
       const link = document.createElement('a');
       link.download = `xisobot-${catName.toLowerCase()}-${new Date().toISOString().slice(0,10)}.png`;
       link.href = dataUrl;
       link.click();
-    } catch (err) { alert('Rasm yuklashda xatolik.'); } finally { setIsExporting(false); }
+    } catch (err) { alert('Rasm yuklashda xatolik.'); } finally { setExportingId(null); }
   };
 
   const toggleFilter = async (key: keyof typeof defaultFilter) => {
@@ -393,7 +400,7 @@ const XPro: React.FC = () => {
       {/* Settings Modal */}
       {isFilterModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 hacker:bg-black w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 dark:border-slate-800 space-y-6">
+          <div className="bg-white dark:bg-slate-900 hacker:bg-black w-full max-sm rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 dark:border-slate-800 space-y-6">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-black text-slate-800 dark:text-white hacker:text-[#0f0]">Hisoblash sozlamalari</h3>
@@ -455,67 +462,87 @@ const XPro: React.FC = () => {
             const now = new Date();
             return (
               <div key={cat.id} className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col group">
-                {/* Visual Preview */}
-                <div ref={(el) => { exportRefs.current[cat.name] = el; }} className="p-8 bg-white text-slate-900">
-                   <div className="text-center mb-6">
-                      <h4 className="font-black text-2xl tracking-tighter text-black uppercase">XPRO KASSA</h4>
-                      <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 font-bold mt-1">
-                        <Calendar size={10} /> {now.toLocaleDateString()} <Clock size={10} className="ml-1" /> {now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                {/* Visual Preview for Image Generation */}
+                <div 
+                   ref={(el) => { exportRefs.current[cat.name] = el; }} 
+                   className="p-10 bg-white text-slate-900 w-[500px] mx-auto flex flex-col items-stretch"
+                   style={{ minHeight: 'auto' }}
+                >
+                   <div className="text-center mb-10">
+                      <h4 className="font-black text-3xl tracking-tighter text-black uppercase mb-2">XPRO KASSA</h4>
+                      <div className="flex flex-col items-center justify-center gap-1 text-[12px] text-black font-black uppercase tracking-widest">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-1.5"><Calendar size={12} /> {now.toLocaleDateString()}</div>
+                          <div className="flex items-center gap-1.5"><Clock size={12} /> {now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                        </div>
+                        <div className="mt-1 border-t border-black pt-1 px-4">{activeShift.name}</div>
                       </div>
                    </div>
 
-                   <div className="space-y-3 mb-6">
-                      <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nomi</span>
-                         <span className="font-black text-black">{cat.name}</span>
+                   <div className="space-y-4 mb-8">
+                      <div className="flex justify-between items-center border-b-2 border-slate-100 pb-3">
+                         <span className="text-[12px] font-black text-black uppercase tracking-[0.2em] flex-shrink-0">Nomi</span>
+                         <span className="font-black text-black text-right text-lg ml-4 break-words">{cat.name}</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Savdo</span>
-                         <span className="font-bold">{stats.savdo.toLocaleString()}</span>
+                      <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                         <span className="text-[12px] font-black text-black uppercase tracking-[0.2em] flex-shrink-0">Savdo</span>
+                         <span className="font-black text-lg text-black">{stats.savdo.toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Xarajat</span>
-                         <span className="font-bold text-red-500">{stats.catExpenses.toLocaleString()}</span>
+                      <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                         <span className="text-[12px] font-black text-black uppercase tracking-[0.2em] flex-shrink-0">Xarajat</span>
+                         <span className="font-black text-lg text-black">{stats.catExpenses.toLocaleString()}</span>
                       </div>
                       {stats.filters.click && (
-                        <div className="flex justify-between items-center">
-                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Click</span>
-                           <span className="font-bold text-indigo-600">{stats.clickSum.toLocaleString()}</span>
+                        <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                           <span className="text-[12px] font-black text-black uppercase tracking-[0.2em] flex-shrink-0">Click</span>
+                           <span className="font-black text-lg text-black">{stats.clickSum.toLocaleString()}</span>
                         </div>
                       )}
                       {stats.filters.terminal && (
-                        <div className="flex justify-between items-center">
-                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Terminal</span>
-                           <span className="font-bold text-indigo-600">{stats.terminalSum.toLocaleString()}</span>
+                        <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                           <span className="text-[12px] font-black text-black uppercase tracking-[0.2em] flex-shrink-0">Terminal</span>
+                           <span className="font-black text-lg text-black">{stats.terminalSum.toLocaleString()}</span>
                         </div>
                       )}
-                      <div className="pt-3 border-t-2 border-dashed border-slate-100 mt-4">
-                         <div className="flex justify-between items-center p-3 bg-slate-50 rounded-2xl">
-                            <span className="text-xs font-black text-black uppercase">Qolgan Pul</span>
-                            <span className="text-lg font-black text-black">{stats.balance.toLocaleString()} so'm</span>
+                      
+                      <div className="pt-6 border-t-2 border-dashed border-black mt-6">
+                         <div className="flex justify-between items-center p-5 bg-slate-100 border border-black rounded-3xl">
+                            <span className="text-xs font-black text-black uppercase tracking-widest">Qolgan Pul</span>
+                            <span className="text-2xl font-black text-black text-right">{stats.balance.toLocaleString()} so'm</span>
                          </div>
                       </div>
                    </div>
 
-                   <div className="space-y-1">
-                      <p className="text-[10px] font-black text-black uppercase mb-2 border-b-2 border-black inline-block">Xarajatlar Ro'yxati:</p>
-                      {stats.transactions.length > 0 ? (
-                        stats.transactions.map(t => (
-                          <div key={t.id} className="flex justify-between text-[11px] py-1 border-b border-slate-50">
-                             <span className="font-medium text-slate-600">{t.description || 'Xarajat'}</span>
-                             <span className="font-bold">{t.amount.toLocaleString()}</span>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-[10px] italic text-slate-400">Ro'yxat bo'sh</p>
-                      )}
+                   <div className="space-y-2">
+                      <p className="text-[12px] font-black text-black uppercase mb-4 border-b-2 border-black inline-block tracking-widest">Xarajatlar Ro'yxati:</p>
+                      <div className="space-y-1.5">
+                        {stats.transactions.length > 0 ? (
+                          stats.transactions.map(t => (
+                            <div key={t.id} className="flex justify-between items-start text-[12px] py-1.5 border-b border-slate-50">
+                               <span className="font-bold text-black pr-4 break-words">{t.description || 'Xarajat'}</span>
+                               <span className="font-black text-black flex-shrink-0">{(t.amount || 0).toLocaleString()}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-[12px] italic text-slate-400 py-2">Ro'yxat bo'sh</p>
+                        )}
+                      </div>
+                   </div>
+                   
+                   <div className="mt-auto pt-10 text-center">
+                      <p className="text-[10px] font-black text-black uppercase tracking-[0.3em] border-t border-black pt-4">XPRO MANAGEMENT SYSTEM</p>
                    </div>
                 </div>
-                {/* Actions */}
+
+                {/* Actions UI */}
                 <div className="bg-slate-50 dark:bg-slate-800/50 p-6 flex gap-3 border-t border-slate-100 dark:border-slate-800 mt-auto">
                   <button onClick={() => handlePrint(cat.name)} className="flex-1 py-4 bg-white dark:bg-slate-900 border dark:border-slate-700 rounded-2xl flex items-center justify-center gap-2 text-xs font-black hover:bg-slate-100 transition-all"><Printer size={16} /> Chop etish</button>
-                  <button onClick={() => handleDownloadImage(cat.name)} disabled={isExporting} className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl flex items-center justify-center gap-2 text-xs font-black disabled:opacity-50 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 dark:shadow-none">
-                     {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} Rasm
+                  <button 
+                    onClick={() => handleDownloadImage(cat.name)} 
+                    disabled={exportingId !== null} 
+                    className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl flex items-center justify-center gap-2 text-xs font-black disabled:opacity-50 hover:bg-indigo-700 transition-all shadow-lg"
+                  >
+                     {exportingId === cat.name ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} Rasm
                   </button>
                 </div>
               </div>
