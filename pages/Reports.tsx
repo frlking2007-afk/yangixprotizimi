@@ -158,29 +158,57 @@ const Reports: React.FC = () => {
             @page { margin: 0; size: 80mm auto; }
             body { font-family: 'Inter', sans-serif; width: 72mm; margin: 0 auto; padding: 15px 0; font-size: 10pt; color: black; background: white; line-height: 1.4; }
             .center { text-align: center; } .bold { font-weight: bold; } .black { font-weight: 900; }
-            .header { font-size: 16pt; margin-bottom: 5px; }
-            .divider { border-top: 1.5px dashed black; margin: 10px 0; }
+            .header { font-size: 24pt; margin-bottom: 5px; text-transform: uppercase; font-weight: 900; }
+            .divider { border-top: 2px dashed black; margin: 15px 0; }
             .row { display: flex; justify-content: space-between; margin-bottom: 5px; }
-            .label { color: black; font-size: 9pt; text-transform: uppercase; font-weight: 900; }
-            .total-row { font-size: 12pt; margin-top: 10px; background: #f0f0f0; padding: 8px; border-radius: 5px; border: 1px solid black; }
+            .label { color: black; font-size: 10pt; text-transform: uppercase; font-weight: 900; }
+            .list-title { font-size: 14pt; margin: 20px 0 10px 0; font-weight: 900; text-transform: uppercase; }
+            
+            /* Yangi Xarajat Dizayni */
+            .item-box { 
+              border: 2px solid black; 
+              padding: 10px; 
+              margin-bottom: 8px; 
+              font-size: 12pt; 
+              font-weight: 900; 
+              display: flex; 
+              justify-content: space-between; 
+              align-items: center; 
+              border-radius: 4px;
+            }
+            
+            .total-row { font-size: 14pt; margin-top: 10px; background: #eee; padding: 10px; border: 2px solid black; font-weight: 900; }
           </style>
         </head>
         <body>
-          <div class="center black header">XPRO KASSA</div>
-          <div class="center bold">${now.toLocaleDateString()} ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+          <div class="center black header">X-PRO</div>
+          <div class="center bold" style="font-size: 14pt; margin-bottom: 10px;">${now.toLocaleDateString()} ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
           <div class="center bold" style="margin-bottom: 15px; font-size: 9pt;">${selectedShift.name}</div>
-          <div class="row"><span class="label">Nomi:</span><span class="black">${catName}</span></div>
+          
+          <div class="center black" style="font-size: 22pt; margin: 15px 0; text-transform: uppercase;">${catName}</div>
+          
           <div class="divider"></div>
-          <div class="row"><span class="label">Savdo:</span><span class="black">${stats.savdo.toLocaleString()}</span></div>
-          <div class="row"><span class="label">Xarajat:</span><span class="black">${stats.catExpenses.toLocaleString()}</span></div>
-          ${stats.filters.click ? `<div class="row"><span class="label">Click:</span><span class="black">${stats.clickSum.toLocaleString()}</span></div>` : ''}
-          ${stats.filters.terminal ? `<div class="row"><span class="label">Terminal:</span><span class="black">${stats.terminalSum.toLocaleString()}</span></div>` : ''}
+          
+          <div class="row"><span class="label">Savdo:</span><span class="black" style="font-size: 12pt;">${stats.savdo.toLocaleString()}</span></div>
+          <div class="row"><span class="label">Xarajat:</span><span class="black" style="font-size: 12pt;">${stats.catExpenses.toLocaleString()}</span></div>
+          ${stats.filters.click ? `<div class="row"><span class="label">Click:</span><span class="black" style="font-size: 12pt;">${stats.clickSum.toLocaleString()}</span></div>` : ''}
+          ${stats.filters.terminal ? `<div class="row"><span class="label">Terminal:</span><span class="black" style="font-size: 12pt;">${stats.terminalSum.toLocaleString()}</span></div>` : ''}
+          
           <div class="divider"></div>
-          <div class="row black total-row"><span>QOLGAN PUL:</span><span>${stats.balance.toLocaleString()} so'm</span></div>
+          <div class="row black total-row"><span>QOLGAN PUL:</span><span>${stats.balance.toLocaleString()}</span></div>
+          
           <div class="divider"></div>
-          <div class="black" style="font-size: 10pt; margin: 10px 0 5px 0; font-weight: 900;">XARAJATLAR RO'YXATI:</div>
-          ${stats.transactions.map(t => `<div style="font-size: 9pt; margin-bottom: 3px; border-bottom: 1px solid #eee; padding-bottom: 2px;"><div class="row"><span>${t.description || 'Xarajat'}</span><span class="bold">${t.amount.toLocaleString()}</span></div></div>`).join('')}
-          <div class="center" style="font-size: 8pt; margin-top: 20px; color: #555; font-weight: bold;">Arxiv ma'lumoti - Xpro</div>
+          <div class="black list-title">XARAJATLAR RO'YXATI:</div>
+          
+          ${stats.transactions.map(t => `
+            <div class="item-box">
+              <span>${t.description || 'Xarajat'}</span>
+              <span>${t.amount.toLocaleString()}</span>
+            </div>
+          `).join('')}
+          
+          <div class="center" style="font-size: 10pt; margin-top: 30px; font-weight: 900;">X-PRO SYSTEM</div>
+          <div style="height: 50px;"></div>
           <script>window.onload=function(){window.print();setTimeout(function(){window.close();},500);};</script>
         </body>
       </html>
