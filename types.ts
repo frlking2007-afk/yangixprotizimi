@@ -15,6 +15,7 @@ export interface ExpenseCategory {
   id: string;
   name: string;
   created_at: string;
+  sort_order?: number;
 }
 
 export interface Transaction {

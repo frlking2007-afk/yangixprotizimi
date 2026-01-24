@@ -15,7 +15,8 @@ import {
   getTransactionsByShift, deleteTransaction,
   getExpenseCategories, updateTransaction, getDeletionPassword,
   createExpenseCategory, updateExpenseCategory, deleteExpenseCategory,
-  saveTransaction, updateShiftManualSum, getCategoryConfigs, upsertCategoryConfig
+  saveTransaction, updateShiftManualSum, getCategoryConfigs, upsertCategoryConfig,
+  updateExpenseCategoriesOrder
 } from '../services/supabase.ts';
 
 const StatCard = ({ label, val, icon, color, onClick }: { label: string, val: number, icon: React.ReactNode, color: 'green' | 'red' | 'indigo' | 'amber', onClick?: () => void }) => {
@@ -59,6 +60,9 @@ const XPro: React.FC = () => {
   const [manualSavdoSums, setManualSavdoSums] = useState<Record<string, number>>({});
   const [allExpenseFilters, setAllExpenseFilters] = useState<Record<string, { xarajat: boolean, click: boolean, terminal: boolean }>>({});
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+
+  // Drag and Drop State
+  const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
 
   const defaultFilter = { xarajat: true, click: false, terminal: false };
 
@@ -251,6 +255,36 @@ const XPro: React.FC = () => {
     }
   };
 
+  // --- Drag and Drop Logic ---
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggedItemId(id);
+    e.dataTransfer.effectAllowed = 'move';
+    // Add custom ghost image or transparency if needed
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    if (draggedItemId === targetId || !draggedItemId) return;
+
+    const items = [...expenseCategories];
+    const dragIndex = items.findIndex(item => item.id === draggedItemId);
+    const dropIndex = items.findIndex(item => item.id === targetId);
+
+    const [draggedItem] = items.splice(dragIndex, 1);
+    items.splice(dropIndex, 0, draggedItem);
+
+    setExpenseCategories(items);
+    setDraggedItemId(null);
+
+    // Persist new order to Supabase
+    await updateExpenseCategoriesOrder(items);
+  };
+
   const startEdit = async (t: Transaction) => {
     const password = prompt("Tahrirlash paroli:");
     if (password === null) return;
@@ -430,7 +464,7 @@ const XPro: React.FC = () => {
     <div className="space-y-6 animate-in fade-in duration-500 pb-20 no-print">
       {/* Settings Modal */}
       {isFilterModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 hacker:bg-black/80 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 hacker:bg-black w-full max-sm rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 dark:border-slate-800 space-y-6">
             <div className="flex items-center justify-between">
               <div>
@@ -596,8 +630,19 @@ const XPro: React.FC = () => {
 
           {activeTab === 'Xarajat' && (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 animate-in slide-in-from-top-2 duration-300">
-              {expenseCategories.map(cat => (
-                <div key={cat.id} className={`relative h-12 rounded-xl border transition-all cursor-pointer flex items-center justify-center p-2 ${activeSubTab === cat.name ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-900 text-slate-600 border-slate-100 dark:border-slate-800'}`} onClick={() => setActiveSubTab(cat.name)}>
+              {expenseCategories.map((cat, index) => (
+                <div 
+                  key={cat.id} 
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, cat.id)}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, cat.id)}
+                  className={`relative h-12 rounded-xl border transition-all cursor-move flex items-center justify-center p-2 
+                    ${activeSubTab === cat.name ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-900 text-slate-600 border-slate-100 dark:border-slate-800'}
+                    ${draggedItemId === cat.id ? 'opacity-30 border-dashed scale-95' : 'opacity-100'}
+                  `} 
+                  onClick={() => setActiveSubTab(cat.name)}
+                >
                   <span className="font-bold text-center text-[12px]">{cat.name}</span>
                   <div className="absolute -top-1.5 -right-1.5 flex gap-1 bg-white dark:bg-slate-800 p-0.5 rounded-lg shadow-md border border-slate-100 z-10">
                      <button onClick={(e) => handleEditCategoryName(e, cat.id, cat.name)} className="p-1 text-slate-400 hover:text-indigo-600"><Edit2 size={10} /></button>

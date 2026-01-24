@@ -63,6 +63,7 @@ export const getExpenseCategories = async (): Promise<ExpenseCategory[]> => {
       .from('expense_categories')
       .select('*')
       .eq('user_id', user?.id || '')
+      .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true });
     
     if (error) throw error;
@@ -76,9 +77,18 @@ export const getExpenseCategories = async (): Promise<ExpenseCategory[]> => {
 export const createExpenseCategory = async (name: string): Promise<ExpenseCategory | null> => {
   const user = await getUser();
   try {
+    // Get max sort order to put new category at the end
+    const { data: currentCats } = await supabase
+      .from('expense_categories')
+      .select('sort_order')
+      .order('sort_order', { ascending: false })
+      .limit(1);
+    
+    const nextOrder = (currentCats && currentCats[0]?.sort_order || 0) + 1;
+
     const { data, error } = await supabase
       .from('expense_categories')
-      .insert([{ name, user_id: user?.id }])
+      .insert([{ name, user_id: user?.id, sort_order: nextOrder }])
       .select()
       .single();
     
@@ -99,6 +109,25 @@ export const updateExpenseCategory = async (id: string, name: string): Promise<v
     if (error) throw error;
   } catch (err) {
     console.error("Category update error:", err);
+  }
+};
+
+export const updateExpenseCategoriesOrder = async (categories: ExpenseCategory[]): Promise<void> => {
+  try {
+    const updates = categories.map((cat, index) => ({
+      id: cat.id,
+      name: cat.name,
+      user_id: (cat as any).user_id, // Keep user_id if present
+      sort_order: index
+    }));
+
+    const { error } = await supabase
+      .from('expense_categories')
+      .upsert(updates);
+    
+    if (error) throw error;
+  } catch (err) {
+    console.error("Update categories order error:", err);
   }
 };
 
