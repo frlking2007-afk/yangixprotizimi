@@ -11,6 +11,9 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('xpro');
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  
+  // State to handle opening a specific shift from Reports in XPro
+  const [targetShiftId, setTargetShiftId] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -43,12 +46,25 @@ const App: React.FC = () => {
     return <Login onLoginSuccess={() => {}} />;
   }
 
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    // If navigating manually, clear any forced shift ID so XPro loads default
+    if (tab !== 'xpro' || (activeTab !== 'xpro')) {
+       setTargetShiftId(null);
+    }
+  };
+
+  const handleContinueShift = (shiftId: string) => {
+    setTargetShiftId(shiftId);
+    setActiveTab('xpro');
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'xpro':
-        return <XPro />;
+        return <XPro forcedShiftId={targetShiftId} />;
       case 'xisobotlar':
-        return <Reports />;
+        return <Reports onContinueShift={handleContinueShift} />;
       case 'sozlama':
         return <Settings />;
       default:
@@ -57,7 +73,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
+    <Layout activeTab={activeTab} setActiveTab={handleTabChange}>
       {renderContent()}
     </Layout>
   );

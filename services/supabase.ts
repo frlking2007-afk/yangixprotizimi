@@ -161,6 +161,22 @@ export const getActiveShift = async (): Promise<Shift | null> => {
   }
 };
 
+export const getShiftById = async (id: string): Promise<Shift | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('shifts')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) throw error;
+    return data as Shift;
+  } catch (err) {
+    console.error("Get shift by ID error:", err);
+    return null;
+  }
+};
+
 export const startNewShift = async (): Promise<Shift | null> => {
   const user = await getUser();
   const now = new Date();

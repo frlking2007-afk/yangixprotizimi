@@ -16,7 +16,7 @@ import {
   getExpenseCategories, updateTransaction, getDeletionPassword,
   createExpenseCategory, updateExpenseCategory, deleteExpenseCategory,
   saveTransaction, updateShiftManualSum, getCategoryConfigs, upsertCategoryConfig,
-  updateExpenseCategoriesOrder
+  updateExpenseCategoriesOrder, getShiftById
 } from '../services/supabase.ts';
 
 const StatCard = ({ label, val, icon, color, onClick }: { label: string, val: number, icon: React.ReactNode, color: 'green' | 'red' | 'indigo' | 'amber', onClick?: () => void }) => {
@@ -45,7 +45,11 @@ const StatCard = ({ label, val, icon, color, onClick }: { label: string, val: nu
   );
 };
 
-const XPro: React.FC = () => {
+interface XProProps {
+  forcedShiftId?: string | null;
+}
+
+const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
@@ -77,10 +81,17 @@ const XPro: React.FC = () => {
   const initData = async () => {
     setLoading(true);
     try {
-      const [shift, categories] = await Promise.all([
-        getActiveShift(),
-        getExpenseCategories()
-      ]);
+      let shift: Shift | null = null;
+      
+      // If a specific shift is requested (e.g., "Continue" from Reports), load it
+      if (forcedShiftId) {
+        shift = await getShiftById(forcedShiftId);
+      } else {
+        // Otherwise load default active shift
+        shift = await getActiveShift();
+      }
+      
+      const categories = await getExpenseCategories();
       
       setActiveShift(shift);
       setExpenseCategories(categories || []);
@@ -113,7 +124,8 @@ const XPro: React.FC = () => {
     }
   };
 
-  useEffect(() => { initData(); }, []);
+  // Re-run init if forcedShiftId changes
+  useEffect(() => { initData(); }, [forcedShiftId]);
 
   const formatAmount = (val: string) => {
     const digits = val.replace(/\D/g, '');

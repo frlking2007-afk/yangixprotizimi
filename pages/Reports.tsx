@@ -6,7 +6,7 @@ import {
   RefreshCcw, ArrowLeft, Wallet, 
   CreditCard, Banknote, TrendingDown,
   Trash2, Download, Printer, Loader2, Save,
-  Coins, TrendingUp, Settings2, Calculator, Plus
+  Coins, TrendingUp, Settings2, Calculator, Plus, PlayCircle
 } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 import { Shift, Transaction, ExpenseCategory } from '../types.ts';
@@ -38,7 +38,11 @@ const StatCard = ({ label, val, icon, color }: { label: string, val: number, ico
   );
 };
 
-const Reports: React.FC = () => {
+interface ReportsProps {
+  onContinueShift?: (shiftId: string) => void;
+}
+
+const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -289,9 +293,20 @@ const Reports: React.FC = () => {
           <button onClick={() => setSelectedShiftId(null)} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-slate-600 font-bold rounded-xl shadow-sm">
             <ArrowLeft size={18} /> Orqaga
           </button>
-          <button onClick={(e) => handleDeleteShift(e, selectedShift.id)} className="p-3 bg-red-50 text-red-600 rounded-2xl hover:bg-red-100 transition-all">
-            <Trash2 size={20} />
-          </button>
+          
+          <div className="flex items-center gap-2">
+            {selectedShift.status === 'active' && onContinueShift && (
+              <button 
+                onClick={() => onContinueShift(selectedShift.id)}
+                className="px-4 py-3 bg-green-50 text-green-600 font-bold rounded-2xl hover:bg-green-100 transition-all flex items-center gap-2 text-sm"
+              >
+                <PlayCircle size={18} /> Davom ettirish
+              </button>
+            )}
+            <button onClick={(e) => handleDeleteShift(e, selectedShift.id)} className="p-3 bg-red-50 text-red-600 rounded-2xl hover:bg-red-100 transition-all">
+              <Trash2 size={20} />
+            </button>
+          </div>
         </div>
 
         <div className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm">
