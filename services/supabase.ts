@@ -221,6 +221,19 @@ export const closeShift = async (shiftId: string): Promise<void> => {
   }
 };
 
+export const reopenShift = async (shiftId: string): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('shifts')
+      .update({ status: 'active', end_date: null })
+      .eq('id', shiftId);
+    if (error) throw error;
+  } catch (err) {
+    console.error("Reopen shift error:", err);
+    throw err;
+  }
+};
+
 export const getAllShifts = async (): Promise<Shift[]> => {
   try {
     const user = await getUser();

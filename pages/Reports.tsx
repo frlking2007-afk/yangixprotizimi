@@ -12,7 +12,8 @@ import * as htmlToImage from 'html-to-image';
 import { Shift, Transaction, ExpenseCategory } from '../types.ts';
 import { 
   getAllShifts, getTransactionsByShift, deleteShift, 
-  getDeletionPassword, getExpenseCategories, getCategoryConfigs
+  getDeletionPassword, getExpenseCategories, getCategoryConfigs,
+  reopenShift
 } from '../services/supabase.ts';
 
 const StatCard = ({ label, val, icon, color }: { label: string, val: number, icon: React.ReactNode, color: 'green' | 'red' | 'indigo' | 'amber' }) => {
@@ -246,6 +247,20 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
     }
   };
 
+  const handleContinueShiftAction = async () => {
+    if (!selectedShift || !onContinueShift) return;
+
+    try {
+      // If the shift is closed, reopen it in the database
+      if (selectedShift.status === 'closed') {
+        await reopenShift(selectedShift.id);
+      }
+      onContinueShift(selectedShift.id);
+    } catch (error) {
+      alert("Smenani ochishda xatolik yuz berdi");
+    }
+  };
+
   const filteredShifts = shifts.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   if (loading && !selectedShiftId) {
@@ -295,9 +310,9 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
           </button>
           
           <div className="flex items-center gap-2">
-            {selectedShift.status === 'active' && onContinueShift && (
+            {onContinueShift && (
               <button 
-                onClick={() => onContinueShift(selectedShift.id)}
+                onClick={handleContinueShiftAction}
                 className="px-4 py-3 bg-green-50 text-green-600 font-bold rounded-2xl hover:bg-green-100 transition-all flex items-center gap-2 text-sm"
               >
                 <PlayCircle size={18} /> Davom ettirish
