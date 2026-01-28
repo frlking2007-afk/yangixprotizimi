@@ -4,6 +4,7 @@ import Layout from './components/Layout.tsx';
 import XPro from './pages/XPro.tsx';
 import Reports from './pages/Reports.tsx';
 import Settings from './pages/Settings.tsx';
+import Notebook from './pages/Notebook.tsx';
 import Login from './pages/Login.tsx';
 import { supabase } from './services/supabase.ts';
 
@@ -65,6 +66,8 @@ const App: React.FC = () => {
         return <XPro forcedShiftId={targetShiftId} />;
       case 'xisobotlar':
         return <Reports onContinueShift={handleContinueShift} />;
+      case 'notebook':
+        return <Notebook />;
       case 'sozlama':
         return <Settings />;
       default:

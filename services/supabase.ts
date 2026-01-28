@@ -1,6 +1,6 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { Transaction, Shift, ExpenseCategory } from '../types';
+import { Transaction, Shift, ExpenseCategory, Note } from '../types';
 
 const SUPABASE_URL = 'https://zvaxhyszcdvnylcljgxz.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2YXhoeXN6Y2R2bnlsY2xqZ3h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5OTQwNjUsImV4cCI6MjA4NDU3MDA2NX0.rBsMCwKE6x_vsEAeu4ALz7oJd_vl47VQt8URTxvQ5go';
@@ -352,5 +352,58 @@ export const getTransactions = async (): Promise<Transaction[]> => {
     return data || [];
   } catch {
     return [];
+  }
+};
+
+// NOTES (DAFTAR) FUNCTIONS
+export const getNotes = async (): Promise<Note[]> => {
+  try {
+    const user = await getUser();
+    const { data, error } = await supabase
+      .from('notes')
+      .select('*')
+      .eq('user_id', user?.id || '')
+      .order('updated_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  } catch {
+    return [];
+  }
+};
+
+export const createNote = async (title: string, content: string): Promise<Note | null> => {
+  const user = await getUser();
+  try {
+    const { data, error } = await supabase
+      .from('notes')
+      .insert([{ title, content, user_id: user?.id }])
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error("Create note error:", err);
+    return null;
+  }
+};
+
+export const updateNote = async (id: string, title: string, content: string): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('notes')
+      .update({ title, content, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw error;
+  } catch (err) {
+    console.error("Update note error:", err);
+  }
+};
+
+export const deleteNote = async (id: string): Promise<void> => {
+  try {
+    const { error } = await supabase.from('notes').delete().eq('id', id);
+    if (error) throw error;
+  } catch (err) {
+    console.error("Delete note error:", err);
   }
 };

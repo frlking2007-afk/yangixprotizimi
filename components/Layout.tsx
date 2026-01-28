@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, BarChart2, Settings, Wallet, Menu, X } from 'lucide-react';
+import { Home, BarChart2, Settings, Wallet, Menu, X, Book } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -14,6 +14,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   const menuItems = [
     { id: 'xpro', label: 'XPro', icon: Home },
     { id: 'xisobotlar', label: 'Hisobotlar', icon: BarChart2 },
+    { id: 'notebook', label: 'Daftar', icon: Book },
     { id: 'sozlama', label: 'Sozlamalar', icon: Settings },
   ];
 
@@ -68,7 +69,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
         {/* Sticky Header */}
         <header className="sticky top-0 z-30 h-16 bg-white dark:bg-slate-900 hacker:bg-black border-b border-slate-200 dark:border-slate-800 hacker:border-[#0f0] flex items-center justify-between px-8 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200 hacker:text-[#0f0] capitalize hacker:font-mono">
-            {activeTab === 'xpro' ? 'Dashboard' : activeTab === 'sozlama' ? 'Sozlamalar' : activeTab}
+            {activeTab === 'xpro' ? 'Dashboard' : activeTab === 'sozlama' ? 'Sozlamalar' : activeTab === 'notebook' ? 'Daftar' : activeTab}
           </h2>
           <div className="flex items-center gap-4">
             {/* Header info could go here */}
