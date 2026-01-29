@@ -80,4 +80,41 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 <input 
                   type="email" 
                   required
-                  value={email
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="admin@xisobot.uz"
+                  className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-900 hacker:bg-black hacker:border hacker:border-[#0f0] border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-indigo-500 hacker:focus:ring-[#0f0] focus:bg-white dark:focus:bg-slate-800 outline-none transition-all font-medium dark:text-white hacker:text-[#0f0]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-400 hacker:text-[#0f0] uppercase tracking-widest mb-2 ml-1">Parol</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 hacker:text-[#0f0]" size={18} />
+                <input 
+                  type="password" 
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-900 hacker:bg-black hacker:border hacker:border-[#0f0] border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-indigo-500 hacker:focus:ring-[#0f0] focus:bg-white dark:focus:bg-slate-800 outline-none transition-all font-medium dark:text-white hacker:text-[#0f0]"
+                />
+              </div>
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="w-full py-4 bg-indigo-600 hacker:bg-[#0f0] text-white hacker:text-black font-black rounded-2xl hover:bg-indigo-700 hacker:hover:bg-[#00cc00] transition-all shadow-lg shadow-indigo-100 dark:shadow-none flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+            >
+              {loading ? <Loader2 className="animate-spin" size={20} /> : 'Tizimga kirish'}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Login;
