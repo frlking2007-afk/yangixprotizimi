@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, BarChart2, Settings, Wallet, Menu, X, Book } from 'lucide-react';
+import { Home, BarChart2, Settings, Menu, X, Book } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -35,9 +35,11 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
       `}>
         <div className="h-full flex flex-col">
           <div className="p-6 flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-600 hacker:bg-[#0f0] rounded-xl flex items-center justify-center text-white hacker:text-black">
-              <Wallet size={24} />
-            </div>
+            <img 
+              src="https://raw.githubusercontent.com/frlking2007-afk/Rasmlar/refs/heads/main/1769675701416.jpg?token=GHSAT0AAAAAADS7B3NI63CNLZPIJOVBRT6K2L3DXXA" 
+              alt="XPro Logo" 
+              className="w-10 h-10 rounded-xl object-cover shadow-sm border border-slate-100 dark:border-slate-800" 
+            />
             <h1 className="text-xl font-bold tracking-tight text-slate-800 dark:text-white hacker:text-[#0f0] hacker:font-mono uppercase">Xpro</h1>
           </div>
 

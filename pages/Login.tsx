@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Wallet, Lock, Mail, Loader2, AlertCircle } from 'lucide-react';
+import { Lock, Mail, Loader2, AlertCircle } from 'lucide-react';
 import { login } from '../services/auth';
 
 interface LoginProps {
@@ -31,11 +31,13 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-10">
-          <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-xl shadow-indigo-100">
-            <Wallet size={32} />
-          </div>
+          <img 
+            src="https://raw.githubusercontent.com/frlking2007-afk/Rasmlar/refs/heads/main/1769675701416.jpg?token=GHSAT0AAAAAADS7B3NI63CNLZPIJOVBRT6K2L3DXXA" 
+            alt="XPro Logo" 
+            className="w-20 h-20 rounded-2xl mx-auto mb-4 shadow-xl shadow-indigo-100 object-cover border-4 border-white" 
+          />
           <h1 className="text-3xl font-black text-slate-800">Xpro</h1>
-          <p className="text-slate-500 mt-2">Kassa boshqaruv tizimiga xush kelibsiz</p>
+          <p className="text-slate-50 mt-2">Kassa boshqaruv tizimiga xush kelibsiz</p>
         </div>
 
         <div className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100">
