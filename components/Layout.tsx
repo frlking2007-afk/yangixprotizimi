@@ -38,7 +38,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           <div className="p-6 flex items-center gap-3">
             {!imgError ? (
               <img 
-                src="https://raw.githubusercontent.com/frlking2007-afk/Rasmlar/main/1769675701416.jpg" 
+                src="https://raw.githubusercontent.com/frlking2007-afk/Rasmlar/refs/heads/main/1769675701416.jpg" 
                 alt="XPro Logo" 
                 className="w-10 h-10 rounded-xl object-cover shadow-sm border border-slate-100 dark:border-slate-800"
                 onError={() => setImgError(true)}

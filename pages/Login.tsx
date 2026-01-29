@@ -34,7 +34,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         <div className="text-center mb-10">
           {!imgError ? (
             <img 
-              src="https://raw.githubusercontent.com/frlking2007-afk/Rasmlar/main/1769675701416.jpg" 
+              src="https://raw.githubusercontent.com/frlking2007-afk/Rasmlar/refs/heads/main/1769675701416.jpg" 
               alt="XPro Logo" 
               className="w-20 h-20 rounded-2xl mx-auto mb-4 shadow-xl shadow-indigo-100 object-cover border-4 border-white"
               onError={() => setImgError(true)}
