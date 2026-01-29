@@ -12,7 +12,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   const [imgError, setImgError] = useState(false);
   
   const lightLogo = "https://raw.githubusercontent.com/frlking2007-afk/Rasmlar/refs/heads/main/1769675701416.jpg";
-  const darkLogo = "https://github.com/frlking2007-afk/Rasmlar/blob/main/1769675605866.jpg?raw=true";
+  const darkLogo = "https://raw.githubusercontent.com/frlking2007-afk/Rasmlar/refs/heads/main/1769675605866.jpg";
   
   const [logoSrc, setLogoSrc] = useState(lightLogo);
 
