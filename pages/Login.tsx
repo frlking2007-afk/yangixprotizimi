@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Lock, Mail, Loader2, AlertCircle } from 'lucide-react';
+import { Lock, Mail, Loader2, AlertCircle, Wallet } from 'lucide-react';
 import { login } from '../services/auth';
 
 interface LoginProps {
@@ -12,6 +12,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imgError, setImgError] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,11 +32,18 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-10">
-          <img 
-            src="https://raw.githubusercontent.com/frlking2007-afk/Rasmlar/refs/heads/main/1769675701416.jpg?token=GHSAT0AAAAAADS7B3NI63CNLZPIJOVBRT6K2L3DXXA" 
-            alt="XPro Logo" 
-            className="w-20 h-20 rounded-2xl mx-auto mb-4 shadow-xl shadow-indigo-100 object-cover border-4 border-white" 
-          />
+          {!imgError ? (
+            <img 
+              src="https://raw.githubusercontent.com/frlking2007-afk/Rasmlar/main/1769675701416.jpg" 
+              alt="XPro Logo" 
+              className="w-20 h-20 rounded-2xl mx-auto mb-4 shadow-xl shadow-indigo-100 object-cover border-4 border-white"
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <div className="w-20 h-20 rounded-2xl mx-auto mb-4 shadow-xl shadow-indigo-100 bg-indigo-600 flex items-center justify-center text-white">
+              <Wallet size={40} />
+            </div>
+          )}
           <h1 className="text-3xl font-black text-slate-800">Xpro</h1>
           <p className="text-slate-50 mt-2">Kassa boshqaruv tizimiga xush kelibsiz</p>
         </div>
