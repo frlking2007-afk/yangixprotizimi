@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, Save, Trash2, Printer, FileText, Search, Clock, Loader2 
@@ -126,7 +125,7 @@ const Notebook: React.FC = () => {
     <div className="h-[calc(100vh-8rem)] flex flex-col md:flex-row gap-6 animate-in fade-in duration-300">
       {/* Sidebar List */}
       <div className="w-full md:w-80 flex flex-col gap-4">
-        <div className="bg-white dark:bg-slate-900 hacker:bg-black hacker:border hacker:border-[#0f0] p-4 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm">
+        <div className="bg-white dark:bg-zinc-900 hacker:bg-black hacker:border hacker:border-[#0f0] p-4 rounded-[2rem] border border-slate-100 dark:border-zinc-800 shadow-sm">
           <button 
             onClick={handleCreateNote}
             className="w-full py-3 bg-indigo-600 hacker:bg-[#0f0] text-white hacker:text-black font-black rounded-xl flex items-center justify-center gap-2 mb-4 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
@@ -141,7 +140,7 @@ const Notebook: React.FC = () => {
               placeholder="Qidirish..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 hacker:bg-black hacker:border hacker:border-[#0f0] border border-slate-100 dark:border-slate-700 rounded-xl text-sm font-medium outline-none dark:text-white"
+              className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-zinc-800 hacker:bg-black hacker:border hacker:border-[#0f0] border border-slate-100 dark:border-zinc-700 rounded-xl text-sm font-medium outline-none dark:text-white"
             />
           </div>
         </div>
@@ -158,14 +157,14 @@ const Notebook: React.FC = () => {
                 onClick={() => setSelectedNote(note)}
                 className={`p-4 rounded-2xl cursor-pointer border transition-all ${
                   selectedNote?.id === note.id 
-                    ? 'bg-white dark:bg-slate-800 border-indigo-600 shadow-md hacker:bg-[#002200] hacker:border-[#0f0]' 
-                    : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-indigo-200 hacker:bg-black hacker:border-[#0f0]/30'
+                    ? 'bg-white dark:bg-zinc-800 border-indigo-600 shadow-md hacker:bg-[#002200] hacker:border-[#0f0]' 
+                    : 'bg-white dark:bg-zinc-900 border-slate-100 dark:border-zinc-800 hover:border-indigo-200 hacker:bg-black hacker:border-[#0f0]/30'
                 }`}
               >
                 <h4 className={`font-bold text-sm mb-1 truncate ${selectedNote?.id === note.id ? 'text-indigo-600 hacker:text-[#0f0]' : 'text-slate-800 dark:text-white'}`}>
                   {note.title || 'Nomsiz Qayd'}
                 </h4>
-                <p className="text-xs text-slate-500 line-clamp-2 mb-2 dark:text-slate-400">{note.content || 'Matn yo\'q...'}</p>
+                <p className="text-xs text-slate-500 line-clamp-2 mb-2 dark:text-zinc-400">{note.content || 'Matn yo\'q...'}</p>
                 <div className="flex items-center gap-1 text-[10px] text-slate-400 font-bold uppercase">
                   <Clock size={10} /> {new Date(note.updated_at).toLocaleDateString()}
                 </div>
@@ -176,10 +175,10 @@ const Notebook: React.FC = () => {
       </div>
 
       {/* Editor Area */}
-      <div className="flex-1 bg-white dark:bg-slate-900 hacker:bg-black hacker:border hacker:border-[#0f0] rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col overflow-hidden">
+      <div className="flex-1 bg-white dark:bg-zinc-900 hacker:bg-black hacker:border hacker:border-[#0f0] rounded-[2.5rem] border border-slate-100 dark:border-zinc-800 shadow-sm flex flex-col overflow-hidden">
         {selectedNote ? (
           <>
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <div className="p-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between">
               <input 
                 type="text"
                 value={editTitle}
@@ -191,14 +190,14 @@ const Notebook: React.FC = () => {
                 <button 
                   onClick={handleSave} 
                   disabled={isSaving}
-                  className="p-3 bg-indigo-50 dark:bg-slate-800 text-indigo-600 hacker:text-[#0f0] hacker:bg-[#002200] rounded-xl hover:bg-indigo-100 transition-all"
+                  className="p-3 bg-indigo-50 dark:bg-zinc-800 text-indigo-600 hacker:text-[#0f0] hacker:bg-[#002200] rounded-xl hover:bg-indigo-100 transition-all"
                   title="Saqlash"
                 >
                   {isSaving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
                 </button>
                 <button 
                   onClick={handlePrint}
-                  className="p-3 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hacker:text-[#0f0] hacker:bg-[#002200] rounded-xl hover:bg-slate-100 transition-all"
+                  className="p-3 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hacker:text-[#0f0] hacker:bg-[#002200] rounded-xl hover:bg-slate-100 transition-all"
                   title="Chop etish"
                 >
                   <Printer size={20} />
@@ -217,7 +216,7 @@ const Notebook: React.FC = () => {
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
               placeholder="Qaydlaringizni shu yerga yozing..."
-              className="flex-1 w-full p-6 resize-none outline-none bg-transparent text-lg leading-relaxed text-slate-700 dark:text-slate-300 hacker:text-[#0f0] hacker:font-mono"
+              className="flex-1 w-full p-6 resize-none outline-none bg-transparent text-lg leading-relaxed text-slate-700 dark:text-zinc-300 hacker:text-[#0f0] hacker:font-mono"
             />
           </>
         ) : (

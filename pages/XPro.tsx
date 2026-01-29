@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Plus, Trash2, Wallet, CreditCard, 
@@ -30,7 +29,7 @@ const StatCard = ({ label, val, icon, color, onClick }: { label: string, val: nu
   return (
     <div 
       onClick={onClick}
-      className={`bg-white dark:bg-slate-900 hacker:bg-black p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between transition-all ${onClick ? 'cursor-pointer hover:border-indigo-300 active:scale-95' : ''}`}
+      className={`bg-white dark:bg-zinc-900 hacker:bg-black p-6 rounded-[2rem] border border-slate-100 dark:border-zinc-800 shadow-sm flex items-center justify-between transition-all ${onClick ? 'cursor-pointer hover:border-indigo-300 active:scale-95' : ''}`}
     >
       <div>
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
@@ -477,7 +476,7 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
       {/* Settings Modal */}
       {isFilterModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 hacker:bg-black/80 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 hacker:bg-black w-full max-sm rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 dark:border-slate-800 space-y-6">
+          <div className="bg-white dark:bg-zinc-900 hacker:bg-black w-full max-sm rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 dark:border-zinc-800 space-y-6">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-black text-slate-800 dark:text-white hacker:text-[#0f0]">Hisoblash sozlamalari</h3>
@@ -487,7 +486,7 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
             </div>
             <div className="space-y-3">
               {['xarajat', 'click', 'terminal'].map((key) => (
-                <label key={key} className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all">
+                <label key={key} className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 dark:border-zinc-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-all">
                   <input 
                     type="checkbox" 
                     checked={currentFilters[key as keyof typeof defaultFilter]} 
@@ -506,7 +505,7 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
         </div>
       )}
 
-      <div className="bg-white dark:bg-slate-900 hacker:bg-black p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between">
+      <div className="bg-white dark:bg-zinc-900 hacker:bg-black p-4 rounded-2xl border border-slate-100 dark:border-zinc-800 shadow-sm flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Clock size={20} className="text-green-600" />
           <h3 className="font-bold text-slate-800 dark:text-white hacker:text-[#0f0] text-sm">{activeShift.name}</h3>
@@ -524,7 +523,7 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
               else if (tab.name !== 'Xarajat' && tab.name !== 'Eksport') setActiveSubTab(null);
             }}
             className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold transition-all border text-sm ${
-              activeTab === tab.name ? 'bg-slate-900 text-white border-slate-900' : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-100 dark:border-slate-800'
+              activeTab === tab.name ? 'bg-slate-900 text-white border-slate-900' : 'bg-white dark:bg-zinc-900 text-slate-500 border-slate-100 dark:border-zinc-800'
             }`}
           >
             <tab.icon size={16} /> {tab.name}
@@ -538,7 +537,7 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
             const stats = calculateCatStats(cat.name);
             const now = new Date();
             return (
-              <div key={cat.id} className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col group">
+              <div key={cat.id} className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-slate-100 dark:border-zinc-800 shadow-sm overflow-hidden flex flex-col group">
                 {/* Visual Preview for Image Generation */}
                 <div 
                    ref={(el) => { exportRefs.current[cat.name] = el; }} 
@@ -612,8 +611,8 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
                 </div>
 
                 {/* Actions UI */}
-                <div className="bg-slate-50 dark:bg-slate-800/50 p-6 flex gap-3 border-t border-slate-100 dark:border-slate-800 mt-auto">
-                  <button onClick={() => handlePrint(cat.name)} className="flex-1 py-4 bg-white dark:bg-slate-900 border dark:border-slate-700 rounded-2xl flex items-center justify-center gap-2 text-xs font-black hover:bg-slate-100 transition-all"><Printer size={16} /> Chop etish</button>
+                <div className="bg-slate-50 dark:bg-zinc-800/50 p-6 flex gap-3 border-t border-slate-100 dark:border-zinc-800 mt-auto">
+                  <button onClick={() => handlePrint(cat.name)} className="flex-1 py-4 bg-white dark:bg-zinc-900 border dark:border-zinc-700 rounded-2xl flex items-center justify-center gap-2 text-xs font-black hover:bg-slate-100 transition-all"><Printer size={16} /> Chop etish</button>
                   <button 
                     onClick={() => handleDownloadImage(cat.name)} 
                     disabled={exportingId !== null} 
@@ -650,13 +649,13 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, cat.id)}
                   className={`relative h-12 rounded-xl border transition-all cursor-move flex items-center justify-center p-2 
-                    ${activeSubTab === cat.name ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-900 text-slate-600 border-slate-100 dark:border-slate-800'}
+                    ${activeSubTab === cat.name ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-zinc-900 text-slate-600 border-slate-100 dark:border-zinc-800'}
                     ${draggedItemId === cat.id ? 'opacity-30 border-dashed scale-95' : 'opacity-100'}
                   `} 
                   onClick={() => setActiveSubTab(cat.name)}
                 >
                   <span className="font-bold text-center text-[12px]">{cat.name}</span>
-                  <div className="absolute -top-1.5 -right-1.5 flex gap-1 bg-white dark:bg-slate-800 p-0.5 rounded-lg shadow-md border border-slate-100 z-10">
+                  <div className="absolute -top-1.5 -right-1.5 flex gap-1 bg-white dark:bg-zinc-800 p-0.5 rounded-lg shadow-md border border-slate-100 z-10">
                      <button onClick={(e) => handleEditCategoryName(e, cat.id, cat.name)} className="p-1 text-slate-400 hover:text-indigo-600"><Edit2 size={10} /></button>
                      <button onClick={(e) => handleDeleteCategoryWithConfirmation(e, cat.id, cat.name)} className="p-1 text-slate-400 hover:text-red-500"><X size={10} /></button>
                   </div>
@@ -675,14 +674,14 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
           )}
 
           {activeTab !== 'Kassa' && (
-            <form onSubmit={handleSaveTransaction} className="bg-white dark:bg-slate-900 hacker:bg-black p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-4 animate-in fade-in duration-300">
+            <form onSubmit={handleSaveTransaction} className="bg-white dark:bg-zinc-900 hacker:bg-black p-6 rounded-[2.5rem] border border-slate-100 dark:border-zinc-800 shadow-sm space-y-4 animate-in fade-in duration-300">
                <div className="flex items-center gap-2 mb-2">
                   <Plus size={18} className="text-indigo-600" />
                   <h4 className="font-bold text-sm uppercase tracking-widest text-slate-800 dark:text-white">Yangi operatsiya ({activeTab})</h4>
                </div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input type="text" value={amountInput} onChange={handleAmountChange} placeholder="Summa (0)" className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl outline-none font-black text-lg dark:text-white" />
-                  <input type="text" value={descInput} onChange={(e) => setDescInput(e.target.value)} placeholder="Tavsif (ixtiyoriy)" className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl outline-none font-medium dark:text-white" />
+                  <input type="text" value={amountInput} onChange={handleAmountChange} placeholder="Summa (0)" className="w-full px-5 py-4 bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800 rounded-2xl outline-none font-black text-lg dark:text-white" />
+                  <input type="text" value={descInput} onChange={(e) => setDescInput(e.target.value)} placeholder="Tavsif (ixtiyoriy)" className="w-full px-5 py-4 bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800 rounded-2xl outline-none font-medium dark:text-white" />
                </div>
                <button type="submit" disabled={isSaving} className="w-full py-4 bg-slate-900 dark:bg-indigo-600 text-white font-black rounded-2xl flex items-center justify-center gap-3 hover:bg-black transition-all disabled:opacity-50">
                   {isSaving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />} Saqlash
@@ -712,12 +711,12 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
               </div>
               <div className="space-y-2.5">
                 {filteredTransactions.map((t) => (
-                  <div key={t.id} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm group">
+                  <div key={t.id} className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-slate-100 dark:border-zinc-800 shadow-sm group">
                     {editingId === t.id ? (
                       <form onSubmit={(e) => saveEdit(e, t.id)} className="space-y-4">
                         <div className="grid grid-cols-2 gap-3">
-                          <input value={editData.amount} onChange={handleEditAmountChange} className="w-full p-3 bg-slate-50 dark:bg-slate-800 border rounded-xl text-sm font-bold" />
-                          <input value={editData.description} onChange={(e) => setEditData({...editData, description: e.target.value})} className="w-full p-3 bg-slate-50 dark:bg-slate-800 border rounded-xl text-sm font-medium" />
+                          <input value={editData.amount} onChange={handleEditAmountChange} className="w-full p-3 bg-slate-50 dark:bg-zinc-800 border rounded-xl text-sm font-bold" />
+                          <input value={editData.description} onChange={(e) => setEditData({...editData, description: e.target.value})} className="w-full p-3 bg-slate-50 dark:bg-zinc-800 border rounded-xl text-sm font-medium" />
                         </div>
                         <div className="flex justify-end gap-3">
                           <button type="button" onClick={() => setEditingId(null)} className="text-xs font-bold text-slate-500">Bekor qilish</button>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Search, Calendar, Clock, 
@@ -25,7 +24,7 @@ const StatCard = ({ label, val, icon, color }: { label: string, val: number, ico
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between">
+    <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-slate-100 dark:border-zinc-800 shadow-sm flex items-center justify-between">
       <div>
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
         <h3 className={`text-2xl font-black ${color === 'red' ? 'text-red-500' : color === 'green' ? 'text-green-600' : 'text-slate-900 dark:text-white'}`}>
@@ -305,7 +304,7 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
     return (
       <div className="space-y-6 animate-in fade-in duration-300 pb-20 no-print">
         <div className="flex items-center justify-between">
-          <button onClick={() => setSelectedShiftId(null)} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-slate-600 font-bold rounded-xl shadow-sm">
+          <button onClick={() => setSelectedShiftId(null)} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 text-slate-600 font-bold rounded-xl shadow-sm">
             <ArrowLeft size={18} /> Orqaga
           </button>
           
@@ -324,7 +323,7 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm">
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-zinc-800 shadow-sm">
           <h2 className="text-2xl font-black text-slate-800 dark:text-white">{selectedShift.name}</h2>
           <div className="flex flex-wrap gap-4 text-slate-400 text-xs font-bold uppercase mt-2">
             <span className="flex items-center gap-1"><Calendar size={12} /> {new Date(selectedShift.start_date).toLocaleDateString()}</span>
@@ -342,7 +341,7 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
                 else if (tab.name !== 'Xarajat' && tab.name !== 'Eksport') setActiveSubTab(null);
               }}
               className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold transition-all border text-sm ${
-                activeTab === tab.name ? 'bg-slate-900 text-white border-slate-900' : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-100 dark:border-slate-800'
+                activeTab === tab.name ? 'bg-slate-900 text-white border-slate-900' : 'bg-white dark:bg-zinc-900 text-slate-500 border-slate-100 dark:border-zinc-800'
               }`}
             >
               <tab.icon size={16} /> {tab.name}
@@ -356,9 +355,13 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
               const stats = calculateCatStats(cat.name);
               const now = new Date();
               return (
-                <div key={cat.id} className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
-                  {/* Export Preview */}
-                  <div ref={(el) => { exportRefs.current[cat.name] = el; }} className="p-10 bg-white text-slate-900 w-[500px] mx-auto flex flex-col items-stretch">
+                <div key={cat.id} className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-slate-100 dark:border-zinc-800 shadow-sm overflow-hidden flex flex-col group">
+                  {/* Visual Preview for Image Generation */}
+                  <div 
+                     ref={(el) => { exportRefs.current[cat.name] = el; }} 
+                     className="p-10 bg-white text-slate-900 w-[500px] mx-auto flex flex-col items-stretch"
+                     style={{ minHeight: 'auto' }}
+                  >
                      <div className="text-center mb-10">
                         <h4 className="font-black text-3xl tracking-tighter text-black uppercase mb-2">XPRO KASSA</h4>
                         <div className="flex flex-col items-center justify-center gap-1 text-[12px] text-black font-black uppercase tracking-widest">
@@ -367,37 +370,37 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
                      </div>
                      <div className="space-y-4 mb-8">
                         <div className="flex justify-between items-center border-b-2 border-slate-100 pb-3">
-                           <span className="text-[12px] font-black text-black uppercase tracking-[0.2em]">Nomi</span>
-                           <span className="font-black text-black text-lg">{cat.name}</span>
+                           <span className="text-[12px] font-black text-black uppercase tracking-[0.2em] flex-shrink-0">Nomi</span>
+                           <span className="font-black text-black text-right text-lg ml-4 break-words">{cat.name}</span>
                         </div>
                         <div className="flex justify-between items-center border-b border-slate-50 pb-2">
-                           <span className="text-[12px] font-black text-black uppercase tracking-[0.2em]">Savdo</span>
+                           <span className="text-[12px] font-black text-black uppercase tracking-[0.2em] flex-shrink-0">Savdo</span>
                            <span className="font-black text-lg text-black">{stats.savdo.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between items-center border-b border-slate-50 pb-2">
-                           <span className="text-[12px] font-black text-black uppercase tracking-[0.2em]">Xarajat</span>
+                           <span className="text-[12px] font-black text-black uppercase tracking-[0.2em] flex-shrink-0">Xarajat</span>
                            <span className="font-black text-lg text-black">{stats.catExpenses.toLocaleString()}</span>
                         </div>
+                        
                         <div className="pt-6 border-t-2 border-dashed border-black mt-6">
                            <div className="flex justify-between items-center p-5 bg-slate-100 border border-black rounded-3xl">
-                              <span className="text-xs font-black text-black uppercase">Qolgan Pul</span>
-                              <span className="text-2xl font-black text-black">{stats.balance.toLocaleString()} so'm</span>
+                              <span className="text-xs font-black text-black uppercase tracking-widest">Qolgan Pul</span>
+                              <span className="text-2xl font-black text-black text-right">{stats.balance.toLocaleString()} so'm</span>
                            </div>
                         </div>
                      </div>
-                     <div className="space-y-2">
-                        <p className="text-[12px] font-black text-black uppercase mb-4 border-b-2 border-black inline-block tracking-widest">Xarajatlar Ro'yxati:</p>
-                        {stats.transactions.map(t => (
-                          <div key={t.id} className="flex justify-between text-[12px] py-1.5 border-b border-slate-50">
-                             <span className="font-bold text-black">{t.description || 'Xarajat'}</span>
-                             <span className="font-black text-black">{(t.amount || 0).toLocaleString()}</span>
-                          </div>
-                        ))}
+                     
+                     <div className="mt-auto pt-10 text-center">
+                        <p className="text-[10px] font-black text-black uppercase tracking-[0.3em] border-t border-black pt-4">XPRO MANAGEMENT SYSTEM</p>
                      </div>
                   </div>
-                  <div className="bg-slate-50 dark:bg-slate-800/50 p-6 flex gap-3 border-t">
-                    <button onClick={() => handlePrint(cat.name)} className="flex-1 py-4 bg-white dark:bg-slate-900 border rounded-2xl flex items-center justify-center gap-2 text-xs font-black"><Printer size={16} /> Chop etish</button>
-                    <button onClick={() => handleDownloadImage(cat.name)} disabled={exportingId !== null} className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl flex items-center justify-center gap-2 text-xs font-black disabled:opacity-50">
+                  <div className="bg-slate-50 dark:bg-zinc-800/50 p-6 flex gap-3 border-t border-slate-100 dark:border-zinc-800 mt-auto">
+                    <button onClick={() => handlePrint(cat.name)} className="flex-1 py-4 bg-white dark:bg-zinc-900 border dark:border-zinc-700 rounded-2xl flex items-center justify-center gap-2 text-xs font-black hover:bg-slate-100 transition-all"><Printer size={16} /> Chop etish</button>
+                    <button 
+                      onClick={() => handleDownloadImage(cat.name)} 
+                      disabled={exportingId !== null} 
+                      className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl flex items-center justify-center gap-2 text-xs font-black disabled:opacity-50 hover:bg-indigo-700 transition-all shadow-lg"
+                    >
                        {exportingId === cat.name ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} Rasm
                     </button>
                   </div>
@@ -422,7 +425,7 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
             {activeTab === 'Xarajat' && (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
                 {expenseCategories.map(cat => (
-                  <div key={cat.id} className={`h-12 rounded-xl border transition-all cursor-pointer flex items-center justify-center p-2 ${activeSubTab === cat.name ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-900 text-slate-600 border-slate-100 dark:border-slate-800'}`} onClick={() => setActiveSubTab(cat.name)}>
+                  <div key={cat.id} className={`h-12 rounded-xl border transition-all cursor-pointer flex items-center justify-center p-2 ${activeSubTab === cat.name ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-zinc-900 text-slate-600 border-slate-100 dark:border-zinc-800'}`} onClick={() => setActiveSubTab(cat.name)}>
                     <span className="font-bold text-center text-[12px]">{cat.name}</span>
                   </div>
                 ))}
@@ -457,7 +460,7 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
                 <h3 className="font-bold text-slate-800 dark:text-white text-sm uppercase px-2">Amallar ({filteredTransactions.length})</h3>
                 <div className="space-y-2.5">
                   {filteredTransactions.map((t) => (
-                    <div key={t.id} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between">
+                    <div key={t.id} className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-slate-100 dark:border-zinc-800 shadow-sm flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t.type === 'kirim' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{t.type === 'kirim' ? <Plus size={18} /> : <TrendingDown size={18} />}</div>
                         <div><p className="font-bold text-slate-800 dark:text-white text-[13px]">{t.description || 'Tavsifsiz'}</p><p className="text-[10px] text-slate-400 uppercase font-bold">{t.sub_category || t.category}</p></div>
@@ -484,7 +487,7 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
           placeholder="Smena nomini qidirish..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-12 pr-4 py-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl outline-none shadow-sm font-medium"
+          className="w-full pl-12 pr-4 py-4 bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 rounded-2xl outline-none shadow-sm font-medium"
         />
       </div>
 
@@ -498,7 +501,7 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
             <div 
               key={shift.id}
               onClick={() => handleSelectShift(shift)}
-              className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm hover:shadow-md transition-all cursor-pointer group flex items-center justify-between"
+              className="bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 rounded-[2rem] p-6 shadow-sm hover:shadow-md transition-all cursor-pointer group flex items-center justify-between"
             >
               <div>
                 <h4 className="font-black text-lg group-hover:text-indigo-600 transition-colors">{shift.name}</h4>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout.tsx';
 import XPro from './pages/XPro.tsx';
@@ -34,7 +33,7 @@ const App: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 hacker:bg-black transition-colors duration-300">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-zinc-950 hacker:bg-black transition-colors duration-300">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-indigo-600 hacker:border-[#0f0] border-t-transparent rounded-full animate-spin"></div>
           <p className="text-slate-400 font-medium hacker:text-[#0f0]">Yuklanmoqda...</p>

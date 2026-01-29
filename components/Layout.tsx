@@ -39,18 +39,18 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   ];
 
   return (
-    <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950 hacker:bg-black transition-colors duration-300">
+    <div className="min-h-screen flex bg-slate-50 dark:bg-zinc-950 hacker:bg-black transition-colors duration-300">
       {/* Mobile Sidebar Toggle */}
       <button 
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className="lg:hidden fixed top-4 right-4 z-50 p-2 text-slate-600 dark:text-slate-400 hacker:text-[#0f0] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all duration-200"
+        className="lg:hidden fixed top-4 right-4 z-50 p-2 text-slate-600 dark:text-zinc-400 hacker:text-[#0f0] hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-xl transition-all duration-200"
       >
         {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
       {/* Sidebar */}
       <aside className={`
-        fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white dark:bg-slate-900 hacker:bg-black border-r border-slate-200 dark:border-slate-800 hacker:border-[#0f0] transform transition-transform duration-300 ease-in-out
+        fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white dark:bg-zinc-900 hacker:bg-black border-r border-slate-200 dark:border-zinc-800 hacker:border-[#0f0] transform transition-transform duration-300 ease-in-out
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="h-full flex flex-col">
@@ -59,7 +59,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
               <img 
                 src={logoSrc}
                 alt="XPro Logo" 
-                className="w-10 h-10 rounded-xl object-cover shadow-sm border border-slate-100 dark:border-slate-800"
+                className="w-10 h-10 rounded-xl object-cover shadow-sm border border-slate-100 dark:border-zinc-800"
                 onError={() => setImgError(true)}
               />
             ) : (
@@ -81,8 +81,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                 className={`
                   w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all
                   ${activeTab === item.id 
-                    ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 hacker:bg-[#002200] hacker:text-[#0f0] hacker:border hacker:border-[#0f0]' 
-                    : 'text-slate-500 dark:text-slate-400 hacker:text-[#0f0]/60 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-white'}
+                    ? 'bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 hacker:bg-[#002200] hacker:text-[#0f0] hacker:border hacker:border-[#0f0]' 
+                    : 'text-slate-500 dark:text-zinc-400 hacker:text-[#0f0]/60 hover:bg-slate-50 dark:hover:bg-zinc-800 hover:text-slate-700 dark:hover:text-white'}
                 `}
               >
                 <item.icon size={20} />
@@ -96,8 +96,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0">
         {/* Sticky Header */}
-        <header className="sticky top-0 z-30 h-16 bg-white dark:bg-slate-900 hacker:bg-black border-b border-slate-200 dark:border-slate-800 hacker:border-[#0f0] flex items-center justify-between px-8 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200 hacker:text-[#0f0] capitalize hacker:font-mono">
+        <header className="sticky top-0 z-30 h-16 bg-white dark:bg-zinc-900 hacker:bg-black border-b border-slate-200 dark:border-zinc-800 hacker:border-[#0f0] flex items-center justify-between px-8 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-700 dark:text-zinc-200 hacker:text-[#0f0] capitalize hacker:font-mono">
             {activeTab === 'xpro' ? 'Dashboard' : activeTab === 'sozlama' ? 'Sozlamalar' : activeTab === 'notebook' ? 'Daftar' : activeTab}
           </h2>
           <div className="flex items-center gap-4">
