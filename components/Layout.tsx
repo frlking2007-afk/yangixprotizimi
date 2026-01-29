@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Home, BarChart2, Settings, Menu, X, Book, Wallet } from 'lucide-react';
 
 interface LayoutProps {
@@ -11,6 +10,26 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [imgError, setImgError] = useState(false);
+  
+  const lightLogo = "https://raw.githubusercontent.com/frlking2007-afk/Rasmlar/refs/heads/main/1769675701416.jpg";
+  const darkLogo = "https://github.com/frlking2007-afk/Rasmlar/blob/main/1769675605866.jpg?raw=true";
+  
+  const [logoSrc, setLogoSrc] = useState(lightLogo);
+
+  useEffect(() => {
+    const updateLogo = () => {
+      const theme = localStorage.getItem('theme') || 'light';
+      if (theme === 'dark' || theme === 'hacker') {
+        setLogoSrc(darkLogo);
+      } else {
+        setLogoSrc(lightLogo);
+      }
+    };
+
+    updateLogo();
+    window.addEventListener('theme-changed', updateLogo);
+    return () => window.removeEventListener('theme-changed', updateLogo);
+  }, []);
 
   const menuItems = [
     { id: 'xpro', label: 'XPro', icon: Home },
@@ -38,7 +57,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           <div className="p-6 flex items-center gap-3">
             {!imgError ? (
               <img 
-                src="https://raw.githubusercontent.com/frlking2007-afk/Rasmlar/refs/heads/main/1769675701416.jpg" 
+                src={logoSrc}
                 alt="XPro Logo" 
                 className="w-10 h-10 rounded-xl object-cover shadow-sm border border-slate-100 dark:border-slate-800"
                 onError={() => setImgError(true)}

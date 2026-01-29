@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="uz">
 <head>
@@ -77,8 +76,10 @@
         document.documentElement.className = theme;
       })();
       
-      // Define process for browser compatibility
-      window.process = { env: { NODE_ENV: 'production' } };
+      // Safely define process for browser compatibility without overwriting existing env
+      window.process = window.process || {};
+      window.process.env = window.process.env || {};
+      window.process.env.NODE_ENV = window.process.env.NODE_ENV || 'production';
     </script>
 <script type="importmap">
 {
