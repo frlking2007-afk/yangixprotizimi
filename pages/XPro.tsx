@@ -586,7 +586,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
           </style>
         </head>
         <body>
-          <div class="center header black uppercase">XPRO KASSA</div>
+          <div class="center header black uppercase">XPRO</div>
           
           <div class="date-row">
             <span>${now.toLocaleDateString()}</span>
@@ -914,7 +914,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
                 <div className="fixed -left-[9999px] top-0">
                   <div ref={el => exportRefs.current[cat.name] = el} className="w-[550px] bg-white p-12 font-sans text-black flex flex-col items-stretch border-2 border-gray-100">
                      {/* Header */}
-                     <h1 className="text-center font-black text-5xl uppercase mb-4 tracking-tight">XPRO KASSA</h1>
+                     <h1 className="text-center font-black text-5xl uppercase mb-4 tracking-tight">XPRO</h1>
                      
                      {/* Date Time Row - NO EMOJIS, 24H */}
                      <div className="flex justify-center gap-8 text-sm font-black text-black mb-4">
@@ -960,11 +960,11 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
                      </div>
                      
                      {/* List Items */}
-                     <div className="space-y-3 mb-10">
+                     <div className="space-y-4 mb-10">
                        {stats.transactions.length > 0 ? stats.transactions.map(t => (
-                         <div key={t.id} className="flex justify-between text-lg font-bold">
-                           <span>{t.description || 'Xarajat'}</span>
-                           <span>{t.amount.toLocaleString()}</span>
+                         <div key={t.id} className="flex justify-between items-center border-4 border-black rounded-[1.5rem] p-5 mb-4 bg-white">
+                           <span className="text-2xl font-black uppercase tracking-tight">{t.description || 'Xarajat'}</span>
+                           <span className="text-3xl font-black">{t.amount.toLocaleString()}</span>
                          </div>
                        )) : (
                          <div className="text-center italic text-sm py-4">Xarajatlar mavjud emas</div>

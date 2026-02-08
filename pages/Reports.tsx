@@ -186,7 +186,7 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
           </style>
         </head>
         <body>
-          <div class="center black header">X-PRO</div>
+          <div class="center black header">XPRO</div>
           <div class="center bold" style="font-size: 14pt; margin-bottom: 10px;">${now.toLocaleDateString()} ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})}</div>
           <div class="center bold" style="margin-bottom: 15px; font-size: 9pt;">${selectedShift.name}</div>
           
@@ -212,7 +212,7 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
             </div>
           `).join('')}
           
-          <div class="center" style="font-size: 10pt; margin-top: 30px; font-weight: 900;">X-PRO SYSTEM</div>
+          <div class="center" style="font-size: 10pt; margin-top: 30px; font-weight: 900;">XPRO MANAGEMENT SYSTEM</div>
           <div style="height: 50px;"></div>
           <script>window.onload=function(){window.print();setTimeout(function(){window.close();},500);};</script>
         </body>
@@ -364,7 +364,7 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
                      style={{ minHeight: 'auto' }}
                   >
                      <div className="text-center mb-10">
-                        <h4 className="font-black text-3xl tracking-tighter text-black uppercase mb-2">XPRO KASSA</h4>
+                        <h4 className="font-black text-3xl tracking-tighter text-black uppercase mb-2">XPRO</h4>
                         <div className="flex flex-col items-center justify-center gap-1 text-[12px] text-black font-black uppercase tracking-widest">
                           <div className="border-t border-black pt-1 px-4">{selectedShift.name}</div>
                         </div>
