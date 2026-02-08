@@ -476,7 +476,8 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
                   { id: 'click', label: "Click ni hisoblash" },
                   { id: 'terminal', label: "Terminallarni hisoblash" }
                 ].map((item) => {
-                  const isActive = allExpenseFilters[activeFilterCategory]?.[item.id] || false;
+                  const currentFilters = allExpenseFilters[activeFilterCategory] || { xarajat: true, click: false, terminal: false };
+                  const isActive = currentFilters[item.id];
                   return (
                     <div key={item.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-zinc-800 rounded-2xl cursor-pointer" onClick={() => handleFilterToggle(item.id as any)}>
                        <span className="font-bold text-slate-700 dark:text-white text-sm">{item.label}</span>
