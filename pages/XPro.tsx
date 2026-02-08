@@ -6,7 +6,8 @@ import {
   PlayCircle, RefreshCcw, 
   Edit2, X, Check, ArrowUpRight, ArrowDownRight, 
   Calculator, Download, Printer, Save, Loader2,
-  TrendingUp, Coins, Settings2, Calendar, List
+  TrendingUp, Coins, Settings2, Calendar, List,
+  ToggleLeft, ToggleRight
 } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 import UIModal from '../components/UIModal.tsx';
@@ -61,6 +62,11 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
   const [allExpenseFilters, setAllExpenseFilters] = useState<Record<string, any>>({});
   const [amountInput, setAmountInput] = useState('');
   const [descInput, setDescInput] = useState('');
+  
+  // Filter Modal State
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [activeFilterCategory, setActiveFilterCategory] = useState<string | null>(null);
+
   const exportRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const [modal, setModal] = useState<{
@@ -125,6 +131,43 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
           if (activeShift) await updateShiftManualSum(activeShift.id, num);
         }
       }
+    });
+  };
+
+  // Savdo summasini o'zgartirish
+  const handleSavdoClick = (catName: string) => {
+    openModal({
+      title: `${catName} Savdosi`,
+      description: "Ushbu toifa uchun savdo summasini kiriting.",
+      type: 'input',
+      initialValue: (manualSavdoSums[catName] || 0).toString(),
+      onConfirm: async (val) => {
+        const num = parseFloat(val?.replace(/\s/g, '') || '0');
+        if (!isNaN(num) && activeShift) {
+          setManualSavdoSums(prev => ({ ...prev, [catName]: num }));
+          // Config ni saqlash
+          const currentFilters = allExpenseFilters[catName] || { xarajat: true, click: false, terminal: false };
+          await upsertCategoryConfig(activeShift.id, catName, {
+            savdo_sum: num,
+            filters: currentFilters
+          });
+        }
+      }
+    });
+  };
+
+  // Filtrlarni o'zgartirish
+  const handleFilterToggle = async (type: 'xarajat' | 'click' | 'terminal') => {
+    if (!activeFilterCategory || !activeShift) return;
+    
+    const currentFilters = allExpenseFilters[activeFilterCategory] || { xarajat: true, click: false, terminal: false };
+    const newFilters = { ...currentFilters, [type]: !currentFilters[type] };
+    
+    setAllExpenseFilters(prev => ({ ...prev, [activeFilterCategory]: newFilters }));
+    
+    await upsertCategoryConfig(activeShift.id, activeFilterCategory, {
+      savdo_sum: manualSavdoSums[activeFilterCategory] || 0,
+      filters: newFilters
     });
   };
 
@@ -204,6 +247,9 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
     const now = new Date();
     const shiftDate = activeShift ? new Date(activeShift.start_date) : now;
     
+    // Time format: 24h, no emoji
+    const timeOpts: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hour12: false };
+    
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
@@ -219,7 +265,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
               width: 76mm; 
               margin: 0 auto; 
               padding: 10px 2px; 
-              font-size: 10pt; 
+              font-size: 11pt; /* Increased font size */
               color: black; 
               background: white; 
             }
@@ -229,59 +275,59 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
             .black { font-weight: 900; }
             .uppercase { text-transform: uppercase; }
             
-            .header { font-size: 18pt; margin-bottom: 5px; letter-spacing: -0.5px; }
-            .date-row { font-size: 8pt; display: flex; justify-content: center; gap: 10px; font-weight: 700; margin-bottom: 5px; }
-            .smena-line { border-top: 1px solid black; border-bottom: 1px solid black; padding: 4px 0; font-size: 8pt; font-weight: 700; text-align: center; margin-bottom: 20px; text-transform: uppercase; }
+            .header { font-size: 22pt; margin-bottom: 10px; letter-spacing: -1px; }
+            .date-row { font-size: 10pt; display: flex; justify-content: center; gap: 15px; font-weight: 700; margin-bottom: 8px; }
+            .smena-line { border-top: 2px solid black; border-bottom: 2px solid black; padding: 6px 0; font-size: 9pt; font-weight: 800; text-align: center; margin-bottom: 25px; text-transform: uppercase; }
             
-            .row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px; }
-            .label { font-size: 9pt; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
-            .value { font-size: 13pt; font-weight: 900; }
+            .row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 14px; }
+            .label { font-size: 10pt; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+            .value { font-size: 14pt; font-weight: 900; }
             
-            .divider-dashed { border-top: 1px dashed #999; margin: 15px 0; }
+            .divider-dashed { border-top: 2px dashed #000; margin: 20px 0; }
             
             .balance-box { 
-              border: 1.5px solid black; 
-              border-radius: 12px; 
-              padding: 10px 15px; 
+              border: 3px solid black; 
+              border-radius: 16px; 
+              padding: 12px 18px; 
               background-color: #f3f4f6; 
               display: flex; 
               justify-content: space-between; 
               align-items: center;
-              margin: 15px 0;
+              margin: 20px 0;
             }
-            .balance-label { font-size: 8pt; font-weight: 800; text-transform: uppercase; width: 60px; line-height: 1.2; }
-            .balance-val { font-size: 16pt; font-weight: 900; }
+            .balance-label { font-size: 10pt; font-weight: 900; text-transform: uppercase; width: 70px; line-height: 1.2; }
+            .balance-val { font-size: 18pt; font-weight: 900; }
             
             .list-header { 
-              font-size: 9pt; 
+              font-size: 10pt; 
               font-weight: 900; 
               text-transform: uppercase; 
-              border-bottom: 1.5px solid black; 
+              border-bottom: 2px solid black; 
               display: inline-block;
               margin-bottom: 15px;
               letter-spacing: 0.5px;
             }
             
-            .list-item { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 9pt; font-weight: 600; }
+            .list-item { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 10pt; font-weight: 700; }
             
-            .footer { margin-top: 30px; text-align: center; font-size: 7pt; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; border-top: 1px solid black; padding-top: 10px; }
+            .footer { margin-top: 40px; text-align: center; font-size: 8pt; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; border-top: 2px solid black; padding-top: 15px; }
           </style>
         </head>
         <body>
           <div class="center header black uppercase">XPRO KASSA</div>
           
           <div class="date-row">
-            <span>📅 ${now.toLocaleDateString()}</span>
-            <span>🕒 ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+            <span>${now.toLocaleDateString()}</span>
+            <span>${now.toLocaleTimeString([], timeOpts)}</span>
           </div>
           
           <div class="smena-line">
-            SMENA - ${shiftDate.toLocaleDateString()} ${shiftDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+            SMENA - ${shiftDate.toLocaleDateString()} ${shiftDate.toLocaleTimeString([], timeOpts)}
           </div>
           
           <div class="row">
             <span class="label">NOMI</span>
-            <span class="value" style="font-size: 12pt;">${catName}</span>
+            <span class="value" style="font-size: 14pt;">${catName}</span>
           </div>
           
           <div class="row">
@@ -298,7 +344,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
           
           <div class="balance-box">
             <div class="balance-label">QOLGAN PUL</div>
-            <div class="balance-val">${stats.balance.toLocaleString()} <span style="font-size: 10pt; font-weight: 700;">so'm</span></div>
+            <div class="balance-val">${stats.balance.toLocaleString()} <span style="font-size: 12pt; font-weight: 700;">so'm</span></div>
           </div>
           
           <div>
@@ -310,7 +356,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
               <span>${t.description || 'Xarajat'}</span>
               <span>${t.amount.toLocaleString()}</span>
             </div>
-          `).join('') : '<div class="center" style="font-style:italic; font-size: 8pt;">Xarajatlar mavjud emas</div>'}
+          `).join('') : '<div class="center" style="font-style:italic; font-size: 9pt;">Xarajatlar mavjud emas</div>'}
           
           <div class="footer">XPRO MANAGEMENT SYSTEM</div>
           <script>window.onload = function() { window.print(); window.close(); }</script>
@@ -361,6 +407,41 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20 no-print">
       <UIModal {...modal} onClose={() => setModal({ ...modal, isOpen: false })} />
+      
+      {/* Custom Filter Modal */}
+      {filterModalOpen && activeFilterCategory && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-zinc-800 overflow-hidden animate-in zoom-in-95 duration-200 p-8">
+             <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Hisoblash Sozlamalari</h3>
+                <button onClick={() => setFilterModalOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-full transition-colors"><X size={20} /></button>
+             </div>
+             
+             <div className="space-y-4">
+                {[
+                  { id: 'xarajat', label: "Xarajatlarni hisoblash" },
+                  { id: 'click', label: "Click ni hisoblash" },
+                  { id: 'terminal', label: "Terminallarni hisoblash" }
+                ].map((item) => {
+                  const isActive = allExpenseFilters[activeFilterCategory]?.[item.id] || false;
+                  return (
+                    <div key={item.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-zinc-800 rounded-2xl cursor-pointer" onClick={() => handleFilterToggle(item.id as any)}>
+                       <span className="font-bold text-slate-700 dark:text-white text-sm">{item.label}</span>
+                       <div className={`w-12 h-6 rounded-full p-1 flex items-center transition-all ${isActive ? 'bg-green-500 justify-end' : 'bg-slate-300 dark:bg-zinc-600 justify-start'}`}>
+                          <div className="w-4 h-4 rounded-full bg-white shadow-sm"></div>
+                       </div>
+                    </div>
+                  )
+                })}
+             </div>
+             
+             <div className="mt-8">
+               <button onClick={() => setFilterModalOpen(false)} className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-black font-black rounded-2xl text-xs uppercase tracking-widest hover:scale-[1.02] transition-transform">Saqlash</button>
+             </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2">
         {['Kassa', 'Click', 'Uzcard', 'Humo', 'Xarajat', 'Eksport'].map(tab => (
           <button key={tab} onClick={() => { setActiveTab(tab); if (tab === 'Xarajat' && expenseCategories.length > 0 && !activeSubTab) setActiveSubTab(expenseCategories[0].name); }} className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold border text-sm transition-all ${activeTab === tab ? 'bg-slate-900 text-white dark:bg-white dark:text-black border-slate-900 dark:border-white shadow-lg' : 'bg-white dark:bg-zinc-900 text-slate-500 border-slate-100 dark:border-zinc-800 hover:border-slate-300'}`}>{tab}</button>
@@ -400,69 +481,70 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
                 </div>
 
                 {/* HIDDEN RECEIPT LAYOUT FOR IMAGE GENERATION - MATCHING THE SCREENSHOT EXACTLY */}
+                {/* Increased Width and Font Sizes for "Katta" look */}
                 <div className="fixed -left-[9999px] top-0">
-                  <div ref={el => exportRefs.current[cat.name] = el} className="w-[450px] bg-white p-10 font-sans text-black flex flex-col items-stretch">
+                  <div ref={el => exportRefs.current[cat.name] = el} className="w-[550px] bg-white p-12 font-sans text-black flex flex-col items-stretch border-2 border-gray-100">
                      {/* Header */}
-                     <h1 className="text-center font-black text-4xl uppercase mb-3 tracking-tight">XPRO KASSA</h1>
+                     <h1 className="text-center font-black text-5xl uppercase mb-4 tracking-tight">XPRO KASSA</h1>
                      
-                     {/* Date Time Row */}
-                     <div className="flex justify-center gap-6 text-[11px] font-bold text-black mb-3">
-                        <span className="flex items-center gap-1">📅 {now.toLocaleDateString()}</span>
-                        <span className="flex items-center gap-1">🕒 {now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                     {/* Date Time Row - NO EMOJIS, 24H */}
+                     <div className="flex justify-center gap-8 text-sm font-black text-black mb-4">
+                        <span>{now.toLocaleDateString()}</span>
+                        <span>{now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})}</span>
                      </div>
                      
                      {/* Smena Line */}
-                     <div className="border-t border-b border-black py-2 text-center text-[10px] font-black uppercase mb-8">
-                        SMENA - {shiftDate.toLocaleDateString()} {shiftDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                     <div className="border-t-4 border-b-4 border-black py-3 text-center text-xs font-black uppercase mb-10">
+                        SMENA - {shiftDate.toLocaleDateString()} {shiftDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})}
                      </div>
                      
-                     {/* Financial Rows */}
-                     <div className="space-y-4 mb-6">
+                     {/* Financial Rows - LARGER TEXT */}
+                     <div className="space-y-6 mb-8">
                         <div className="flex justify-between items-end">
-                           <span className="text-sm font-black uppercase tracking-widest">NOMI</span>
-                           <span className="text-xl font-black text-right">{cat.name}</span>
+                           <span className="text-lg font-black uppercase tracking-widest">NOMI</span>
+                           <span className="text-3xl font-black text-right">{cat.name}</span>
                         </div>
                         
                         <div className="flex justify-between items-end">
-                           <span className="text-sm font-black uppercase tracking-widest">SAVDO</span>
-                           <span className="text-2xl font-black">{stats.savdo.toLocaleString()}</span>
+                           <span className="text-lg font-black uppercase tracking-widest">SAVDO</span>
+                           <span className="text-3xl font-black">{stats.savdo.toLocaleString()}</span>
                         </div>
                         
                         <div className="flex justify-between items-end">
-                           <span className="text-sm font-black uppercase tracking-widest">XARAJAT</span>
-                           <span className="text-2xl font-black">{stats.totalDeduction.toLocaleString()}</span>
+                           <span className="text-lg font-black uppercase tracking-widest">XARAJAT</span>
+                           <span className="text-3xl font-black">{stats.totalDeduction.toLocaleString()}</span>
                         </div>
                      </div>
                      
                      {/* Dashed Divider */}
-                     <div className="border-t border-dashed border-gray-400 my-4"></div>
+                     <div className="border-t-2 border-dashed border-gray-900 my-6"></div>
                      
                      {/* Result Box */}
-                     <div className="border-2 border-black rounded-[1.5rem] bg-slate-50 p-6 flex justify-between items-center my-4 shadow-sm">
-                        <span className="text-xs font-black uppercase w-20 leading-tight">QOLGAN PUL</span>
-                        <span className="text-3xl font-black">{stats.balance.toLocaleString()} <span className="text-lg">so'm</span></span>
+                     <div className="border-4 border-black rounded-[2rem] bg-slate-50 p-8 flex justify-between items-center my-6 shadow-sm">
+                        <span className="text-sm font-black uppercase w-24 leading-tight">QOLGAN PUL</span>
+                        <span className="text-4xl font-black">{stats.balance.toLocaleString()} <span className="text-xl">so'm</span></span>
                      </div>
                      
                      {/* List Header */}
-                     <div className="mt-6 mb-4">
-                        <span className="border-b-2 border-black text-sm font-black uppercase pb-1">XARAJATLAR RO'YXATI:</span>
+                     <div className="mt-8 mb-6">
+                        <span className="border-b-4 border-black text-lg font-black uppercase pb-1">XARAJATLAR RO'YXATI:</span>
                      </div>
                      
                      {/* List Items */}
-                     <div className="space-y-2 mb-8">
+                     <div className="space-y-3 mb-10">
                        {stats.transactions.length > 0 ? stats.transactions.map(t => (
-                         <div key={t.id} className="flex justify-between text-sm font-bold">
+                         <div key={t.id} className="flex justify-between text-lg font-bold">
                            <span>{t.description || 'Xarajat'}</span>
                            <span>{t.amount.toLocaleString()}</span>
                          </div>
                        )) : (
-                         <div className="text-center italic text-xs py-2">Xarajatlar mavjud emas</div>
+                         <div className="text-center italic text-sm py-4">Xarajatlar mavjud emas</div>
                        )}
                      </div>
                      
                      {/* Footer */}
-                     <div className="border-t border-black pt-4 text-center">
-                        <span className="text-[9px] font-black uppercase tracking-[0.2em]">XPRO MANAGEMENT SYSTEM</span>
+                     <div className="border-t-4 border-black pt-6 text-center">
+                        <span className="text-xs font-black uppercase tracking-[0.3em]">XPRO MANAGEMENT SYSTEM</span>
                      </div>
                   </div>
                 </div>
@@ -517,9 +599,26 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
                  const stats = calculateCatStats(activeSubTab);
                  return (
                    <>
-                     <StatCard label="Savdo" val={stats.savdo} icon={<Coins />} color="green" />
-                     <StatCard label="Hisoblangan Chiqim" val={stats.totalDeduction} icon={<Settings2 />} color="red" />
-                     <StatCard label="Sof Foyda" val={stats.balance} icon={<TrendingUp />} color="indigo" />
+                     <StatCard 
+                        label="Savdo" 
+                        val={stats.savdo} 
+                        icon={<Coins />} 
+                        color="green" 
+                        onClick={() => handleSavdoClick(activeSubTab)}
+                     />
+                     <StatCard 
+                        label="Hisoblangan Chiqim" 
+                        val={stats.totalDeduction} 
+                        icon={<Settings2 />} 
+                        color="red" 
+                        onClick={() => { setActiveFilterCategory(activeSubTab); setFilterModalOpen(true); }}
+                     />
+                     <StatCard 
+                        label="Sof Foyda" 
+                        val={stats.balance} 
+                        icon={<TrendingUp />} 
+                        color="indigo" 
+                     />
                    </>
                  )
                })()}
