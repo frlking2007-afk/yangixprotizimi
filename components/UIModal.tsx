@@ -14,6 +14,7 @@ interface UIModalProps {
   confirmText?: string;
   cancelText?: string;
   isDanger?: boolean;
+  enableNumberFormatting?: boolean;
 }
 
 const UIModal: React.FC<UIModalProps> = ({
@@ -28,14 +29,17 @@ const UIModal: React.FC<UIModalProps> = ({
   confirmText = 'Tasdiqlash',
   cancelText = 'Bekor qilish',
   isDanger = false,
+  enableNumberFormatting = false,
 }) => {
   const [inputValue, setInputValue] = useState(initialValue);
 
+  const formatAmount = (val: string) => val.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+
   useEffect(() => {
     if (isOpen) {
-      setInputValue(initialValue);
+      setInputValue(enableNumberFormatting ? formatAmount(initialValue) : initialValue);
     }
-  }, [isOpen, initialValue]);
+  }, [isOpen, initialValue, enableNumberFormatting]);
 
   if (!isOpen) return null;
 
@@ -43,6 +47,11 @@ const UIModal: React.FC<UIModalProps> = ({
     e.preventDefault();
     onConfirm(inputValue);
     onClose();
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInputValue(enableNumberFormatting ? formatAmount(val) : val);
   };
 
   return (
@@ -77,7 +86,7 @@ const UIModal: React.FC<UIModalProps> = ({
                 autoFocus
                 type={type === 'password' ? 'password' : 'text'}
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                onChange={handleChange}
                 placeholder={placeholder}
                 className="w-full px-6 py-4 bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800 rounded-2xl outline-none font-bold text-lg focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-white/10 transition-all dark:text-white"
               />

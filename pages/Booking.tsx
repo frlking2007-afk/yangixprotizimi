@@ -49,6 +49,7 @@ const Booking: React.FC = () => {
     placeholder?: string;
     onConfirm: (val?: string) => void;
     isDanger?: boolean;
+    enableNumberFormatting?: boolean;
   }>({
     isOpen: false,
     type: 'input',

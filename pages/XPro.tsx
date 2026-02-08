@@ -74,6 +74,10 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
   const [editAmountVal, setEditAmountVal] = useState('');
   const [editDescVal, setEditDescVal] = useState('');
 
+  // Add Amount to Transaction State
+  const [addAmountModalOpen, setAddAmountModalOpen] = useState(false);
+  const [targetAddTransaction, setTargetAddTransaction] = useState<Transaction | null>(null);
+
   const exportRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const [modal, setModal] = useState<{
@@ -85,6 +89,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
     placeholder?: string;
     onConfirm: (val?: string) => void;
     isDanger?: boolean;
+    enableNumberFormatting?: boolean;
   }>({
     isOpen: false,
     type: 'input',
@@ -264,6 +269,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
       description: "Amaldagi jami kassa summasini kiriting.",
       type: 'input',
       initialValue: manualKassaSum.toString(),
+      enableNumberFormatting: true,
       onConfirm: async (val) => {
         const num = parseFloat(val?.replace(/\s/g, '') || '0');
         if (!isNaN(num)) {
@@ -281,6 +287,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
       description: "Ushbu toifa uchun savdo summasini kiriting.",
       type: 'input',
       initialValue: (manualSavdoSums[catName] || 0).toString(),
+      enableNumberFormatting: true,
       onConfirm: async (val) => {
         const num = parseFloat(val?.replace(/\s/g, '') || '0');
         if (!isNaN(num) && activeShift) {
@@ -441,6 +448,40 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
     const updatedTrans = await getTransactionsByShift(activeShift.id);
     setTransactions(updatedTrans || []);
     setEditingTransaction(null);
+  };
+
+  // ADD AMOUNT TO TRANSACTION
+  const handleAddAmountClick = (t: Transaction) => {
+    openModal({
+      title: "Qo'shish paroli",
+      type: 'password',
+      onConfirm: async (password) => {
+        const correctPassword = await getDeletionPassword();
+        if (password !== correctPassword) return alert("Parol noto'g'ri!");
+        
+        setTargetAddTransaction(t);
+        setAddAmountModalOpen(true);
+      }
+    });
+  };
+
+  const handleSaveAddedAmount = async (val?: string) => {
+    if (!targetAddTransaction || !activeShift || !val) return;
+    const addedAmount = parseFloat(val.replace(/\s/g, ''));
+    if (isNaN(addedAmount) || addedAmount <= 0) return;
+
+    const newTotal = targetAddTransaction.amount + addedAmount;
+
+    setAddAmountModalOpen(false);
+    
+    await updateTransaction(targetAddTransaction.id, {
+      amount: newTotal
+    });
+
+    // Refresh list
+    const updatedTrans = await getTransactionsByShift(activeShift.id);
+    setTransactions(updatedTrans || []);
+    setTargetAddTransaction(null);
   };
 
   const handleDeleteTransaction = async (id: string) => {
@@ -712,6 +753,20 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
                  ))}
              </div>
           </div>
+      )}
+
+      {/* Add Amount Modal */}
+      {addAmountModalOpen && targetAddTransaction && (
+        <UIModal
+          isOpen={addAmountModalOpen}
+          onClose={() => setAddAmountModalOpen(false)}
+          onConfirm={handleSaveAddedAmount}
+          title="Summa qo'shish"
+          description={`"${targetAddTransaction.description || 'Ushbu operatsiya'}" summasiga qo'shimcha summa qo'shish.`}
+          type="input"
+          placeholder="Qo'shiladigan summa"
+          enableNumberFormatting={true}
+        />
       )}
 
       {/* Custom Filter Modal */}
@@ -1075,6 +1130,13 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
                           <p className={`font-black text-sm mr-2 ${t.type === 'kirim' ? 'text-green-600' : 'text-red-500'}`}>
                              {t.type === 'kirim' ? '+' : '-'}{(t.amount || 0).toLocaleString()}
                           </p>
+                          <button
+                            onClick={() => handleAddAmountClick(t)}
+                            className="p-2 text-slate-300 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                            title="Summa qo'shish"
+                          >
+                            <Plus size={16} />
+                          </button>
                           <button 
                             onClick={() => handleEditTransactionClick(t)}
                             className="p-2 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
