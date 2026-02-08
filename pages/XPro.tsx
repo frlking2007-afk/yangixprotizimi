@@ -407,10 +407,21 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
 
   // TRANSAKSIYANI TAHRIRLASH
   const handleEditTransactionClick = (t: Transaction) => {
-    setEditingTransaction(t);
-    setEditAmountVal(t.amount.toString());
-    setEditDescVal(t.description || '');
-    setEditTransModalOpen(true);
+    // Parol so'rash
+    openModal({
+      title: "Tahrirlash paroli",
+      type: 'password',
+      onConfirm: async (password) => {
+        const correctPassword = await getDeletionPassword();
+        if (password !== correctPassword) return alert("Parol noto'g'ri!");
+        
+        // Parol to'g'ri bo'lsa tahrirlash oynasini ochamiz
+        setEditingTransaction(t);
+        setEditAmountVal(t.amount.toString());
+        setEditDescVal(t.description || '');
+        setEditTransModalOpen(true);
+      }
+    });
   };
 
   const handleSaveEditedTransaction = async (e: React.FormEvent) => {
@@ -631,7 +642,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
                        </div>
                        <div className="text-left">
                           <h4 className="font-bold text-slate-800 dark:text-white group-hover:text-indigo-600 transition-colors">{s.name}</h4>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase">{new Date(s.start_date).toLocaleDateString()} • {new Date(s.start_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">{new Date(s.start_date).toLocaleDateString()} • {new Date(s.start_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})}</p>
                        </div>
                     </div>
                     <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-zinc-800 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all">
@@ -986,41 +997,44 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
           )}
 
           {activeTab === 'Xarajat' && activeSubTab && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-300">
-               {(() => {
+            (() => {
                  const stats = calculateCatStats(activeSubTab);
                  return (
-                   <>
-                     <StatCard 
-                        label="Savdo" 
-                        val={stats.savdo} 
-                        icon={<Coins />} 
-                        color="green" 
-                        onClick={() => handleSavdoClick(activeSubTab)}
-                     />
-                     <StatCard 
-                        label="Jami Xarajat" 
-                        val={stats.catExpenses} 
-                        icon={<Wallet />} 
-                        color="amber" 
-                     />
-                     <StatCard 
-                        label="Hisoblangan Chiqim" 
-                        val={stats.totalDeduction} 
-                        icon={<Settings2 />} 
-                        color="red" 
-                        onClick={() => { setActiveFilterCategory(activeSubTab); setFilterModalOpen(true); }}
-                     />
-                     <StatCard 
-                        label="Sof Foyda" 
-                        val={stats.balance} 
-                        icon={<TrendingUp />} 
-                        color="indigo" 
-                     />
-                   </>
+                   <div className="space-y-4 animate-in fade-in duration-300">
+                      <div className="grid grid-cols-1">
+                          <StatCard 
+                             label={`${activeSubTab} bo'yicha jami xarajat`} 
+                             val={stats.catExpenses} 
+                             icon={<Wallet />} 
+                             color="red" 
+                          />
+                      </div>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                         <StatCard 
+                            label="Savdo" 
+                            val={stats.savdo} 
+                            icon={<Coins />} 
+                            color="green" 
+                            onClick={() => handleSavdoClick(activeSubTab)}
+                         />
+                         <StatCard 
+                            label="Hisoblangan Chiqim" 
+                            val={stats.totalDeduction} 
+                            icon={<Settings2 />} 
+                            color="amber" 
+                            onClick={() => { setActiveFilterCategory(activeSubTab); setFilterModalOpen(true); }}
+                         />
+                         <StatCard 
+                            label="Sof Foyda" 
+                            val={stats.balance} 
+                            icon={<TrendingUp />} 
+                            color="indigo" 
+                         />
+                      </div>
+                   </div>
                  )
-               })()}
-            </div>
+            })()
           )}
           
           {activeTab !== 'Kassa' && (
@@ -1052,7 +1066,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
                              <div className="flex items-center gap-2 mt-0.5">
                                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t.sub_category || t.category}</span>
                                 <span className="text-[9px] text-slate-300">•</span>
-                                <span className="text-[9px] font-bold text-slate-400 uppercase">{new Date(t.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                <span className="text-[9px] font-bold text-slate-400 uppercase">{new Date(t.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})}</span>
                              </div>
                           </div>
                        </div>

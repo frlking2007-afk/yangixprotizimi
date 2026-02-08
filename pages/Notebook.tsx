@@ -167,7 +167,7 @@ const Notebook: React.FC = () => {
                 </h4>
                 <p className="text-xs text-slate-500 line-clamp-2 mb-2 dark:text-zinc-400">{note.content || 'Matn yo\'q...'}</p>
                 <div className="flex items-center gap-1 text-[10px] text-slate-400 font-bold uppercase">
-                  <Clock size={10} /> {new Date(note.updated_at).toLocaleDateString()}
+                  <Clock size={10} /> {new Date(note.updated_at).toLocaleDateString()} {new Date(note.updated_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})}
                 </div>
               </div>
             ))

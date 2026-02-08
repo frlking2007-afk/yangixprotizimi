@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Search, Calendar, Clock, 
@@ -186,7 +187,7 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
         </head>
         <body>
           <div class="center black header">X-PRO</div>
-          <div class="center bold" style="font-size: 14pt; margin-bottom: 10px;">${now.toLocaleDateString()} ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+          <div class="center bold" style="font-size: 14pt; margin-bottom: 10px;">${now.toLocaleDateString()} ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})}</div>
           <div class="center bold" style="margin-bottom: 15px; font-size: 9pt;">${selectedShift.name}</div>
           
           <div class="center black" style="font-size: 22pt; margin: 15px 0; text-transform: uppercase;">${catName}</div>
@@ -327,7 +328,7 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
           <h2 className="text-2xl font-black text-slate-800 dark:text-white">{selectedShift.name}</h2>
           <div className="flex flex-wrap gap-4 text-slate-400 text-xs font-bold uppercase mt-2">
             <span className="flex items-center gap-1"><Calendar size={12} /> {new Date(selectedShift.start_date).toLocaleDateString()}</span>
-            <span className="flex items-center gap-1"><Clock size={12} /> {new Date(selectedShift.start_date).toLocaleTimeString()} - {selectedShift.end_date ? new Date(selectedShift.end_date).toLocaleTimeString() : 'Aktiv'}</span>
+            <span className="flex items-center gap-1"><Clock size={12} /> {new Date(selectedShift.start_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})} - {selectedShift.end_date ? new Date(selectedShift.end_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false}) : 'Aktiv'}</span>
           </div>
         </div>
 

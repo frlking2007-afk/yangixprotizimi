@@ -21,9 +21,12 @@ const Booking: React.FC = () => {
 
   // Booking State
   const [selectedDateTime, setSelectedDateTime] = useState<string>(() => {
+    // Current time in local timezone for datetime-local input
     const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    return now.toISOString().slice(0, 16);
+    // Adjust for timezone offset to get local ISO string-like format
+    const offset = now.getTimezoneOffset() * 60000;
+    const localISOTime = (new Date(now.getTime() - offset)).toISOString().slice(0, 16);
+    return localISOTime;
   });
   const [bookings, setBookings] = useState<BookingType[]>([]);
   
@@ -198,11 +201,16 @@ const Booking: React.FC = () => {
     setSelectedRoom(room);
     if (booking) {
       // Room is busy, show details (fill form with existing data)
+      // Convert UTC booking time to local datetime-local string
+      const bDate = new Date(booking.booking_time);
+      const offset = bDate.getTimezoneOffset() * 60000;
+      const localBookingTime = (new Date(bDate.getTime() - offset)).toISOString().slice(0, 16);
+
       setBookingForm({
         customerName: booking.customer_name,
         phoneNumber: booking.phone_number,
         description: booking.description,
-        bookingTime: new Date(booking.booking_time).toISOString().slice(0, 16)
+        bookingTime: localBookingTime
       });
     } else {
       // Room is free, setup for new booking
