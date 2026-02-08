@@ -9,7 +9,11 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) => {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  // Sidebar holatini eslab qolish
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('xpro_sidebar_collapsed') === 'true';
+  });
+  
   const [imgError, setImgError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -17,6 +21,11 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   const darkLogo = "https://raw.githubusercontent.com/frlking2007-afk/Rasmlar/refs/heads/main/1769675605866.jpg";
   
   const [logoSrc, setLogoSrc] = useState(lightLogo);
+
+  // Sidebar holati o'zgarganda saqlash
+  useEffect(() => {
+    localStorage.setItem('xpro_sidebar_collapsed', isSidebarCollapsed.toString());
+  }, [isSidebarCollapsed]);
 
   useEffect(() => {
     const updateLogo = () => {
@@ -36,7 +45,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   const menuItems = [
     { id: 'xpro', label: 'XPro', icon: Home },
     { id: 'xisobotlar', label: 'Hisobotlar', icon: BarChart2 },
-    { id: 'bron', label: 'Bron', icon: CalendarRange }, // New Item
+    { id: 'bron', label: 'Bron', icon: CalendarRange },
     { id: 'notebook', label: 'Daftar', icon: Book },
     { id: 'sozlama', label: 'Sozlamalar', icon: Settings },
   ];

@@ -10,7 +10,11 @@ import Login from './pages/Login.tsx';
 import { supabase } from './services/supabase.ts';
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('xpro');
+  // Sahifani yangilaganda oxirgi tabni eslab qolish
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('xpro_active_tab') || 'xpro';
+  });
+  
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
@@ -32,6 +36,11 @@ const App: React.FC = () => {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // activeTab o'zgarganda localStorage-ga saqlash
+  useEffect(() => {
+    localStorage.setItem('xpro_active_tab', activeTab);
+  }, [activeTab]);
 
   if (loading) {
     return (
