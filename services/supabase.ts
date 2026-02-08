@@ -1,6 +1,6 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { Transaction, Shift, ExpenseCategory, Note, BookingCategory, Room } from '../types';
+import { Transaction, Shift, ExpenseCategory, Note, BookingCategory, Room, Booking } from '../types';
 
 const SUPABASE_URL = 'https://zvaxhyszcdvnylcljgxz.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2YXhoeXN6Y2R2bnlsY2xqZ3h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5OTQwNjUsImV4cCI6MjA4NDU3MDA2NX0.rBsMCwKE6x_vsEAeu4ALz7oJd_vl47VQt8URTxvQ5go';
@@ -105,6 +105,57 @@ export const deleteRoom = async (roomId: string) => {
   const { error } = await supabase.from('rooms').delete().eq('id', roomId);
   if (error) throw error;
 };
+
+// --- NEW BOOKING LOGIC ---
+
+export const getBookingsForDate = async (date: Date): Promise<Booking[]> => {
+  const user = await getUser();
+  if (!user) return [];
+
+  // Kunning boshi va oxiri
+  const startDate = new Date(date);
+  startDate.setHours(0, 0, 0, 0);
+  
+  const endDate = new Date(date);
+  endDate.setHours(23, 59, 59, 999);
+
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('*')
+    .eq('user_id', user.id)
+    .gte('booking_time', startDate.toISOString())
+    .lte('booking_time', endDate.toISOString());
+
+  if (error) {
+    console.error("Error fetching bookings:", error);
+    return [];
+  }
+  return data || [];
+};
+
+export const createBooking = async (bookingData: Omit<Booking, 'id' | 'created_at'>): Promise<Booking | null> => {
+  const user = await getUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from('bookings')
+    .insert([{ ...bookingData, user_id: user.id }])
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Booking create error:", error);
+    return null;
+  }
+  return data;
+};
+
+export const deleteBooking = async (bookingId: string): Promise<void> => {
+  const { error } = await supabase.from('bookings').delete().eq('id', bookingId);
+  if (error) throw error;
+};
+
+// --- END NEW BOOKING LOGIC ---
 
 export const getActiveShift = async (): Promise<Shift | null> => {
   try {

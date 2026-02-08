@@ -68,6 +68,12 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [activeFilterCategory, setActiveFilterCategory] = useState<string | null>(null);
 
+  // Edit Transaction Modal State
+  const [editTransModalOpen, setEditTransModalOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [editAmountVal, setEditAmountVal] = useState('');
+  const [editDescVal, setEditDescVal] = useState('');
+
   const exportRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const [modal, setModal] = useState<{
@@ -332,6 +338,33 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // TRANSAKSIYANI TAHRIRLASH
+  const handleEditTransactionClick = (t: Transaction) => {
+    setEditingTransaction(t);
+    setEditAmountVal(t.amount.toString());
+    setEditDescVal(t.description || '');
+    setEditTransModalOpen(true);
+  };
+
+  const handleSaveEditedTransaction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTransaction || !activeShift) return;
+    const num = parseFloat(editAmountVal.replace(/\s/g, ''));
+    if (isNaN(num) || num <= 0) return;
+    
+    setEditTransModalOpen(false);
+    
+    await updateTransaction(editingTransaction.id, {
+      amount: num,
+      description: editDescVal
+    });
+    
+    // Refresh list
+    const updatedTrans = await getTransactionsByShift(activeShift.id);
+    setTransactions(updatedTrans || []);
+    setEditingTransaction(null);
   };
 
   const handleDeleteTransaction = async (id: string) => {
@@ -599,6 +632,41 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
         </div>
       )}
 
+      {/* Edit Transaction Modal */}
+      {editTransModalOpen && editingTransaction && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+           <div className="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-zinc-800 overflow-hidden animate-in zoom-in-95 duration-200 p-8">
+              <div className="flex items-center justify-between mb-6">
+                 <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Tahrirlash</h3>
+                 <button onClick={() => setEditTransModalOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-full transition-colors"><X size={20} /></button>
+              </div>
+
+              <form onSubmit={handleSaveEditedTransaction} className="space-y-4">
+                 <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Summa</label>
+                    <input 
+                      type="text" 
+                      value={editAmountVal} 
+                      onChange={(e) => setEditAmountVal(formatAmount(e.target.value))}
+                      className="w-full px-5 py-3.5 bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800 rounded-2xl outline-none font-black text-lg dark:text-white focus:ring-2 focus:ring-slate-900/5 transition-all"
+                    />
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Tavsif</label>
+                    <input 
+                      type="text" 
+                      value={editDescVal} 
+                      onChange={(e) => setEditDescVal(e.target.value)}
+                      placeholder="Tavsif..."
+                      className="w-full px-5 py-3.5 bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800 rounded-2xl outline-none font-medium dark:text-white focus:ring-2 focus:ring-slate-900/5 transition-all"
+                    />
+                 </div>
+                 <button type="submit" className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-black font-black rounded-2xl mt-4">Saqlash</button>
+              </form>
+           </div>
+        </div>
+      )}
+
       {/* Active Shift Header */}
       <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-slate-100 dark:border-zinc-800 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
          <div>
@@ -811,7 +879,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
           )}
 
           {activeTab === 'Xarajat' && activeSubTab && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in duration-300">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-300">
                {(() => {
                  const stats = calculateCatStats(activeSubTab);
                  return (
@@ -822,6 +890,12 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
                         icon={<Coins />} 
                         color="green" 
                         onClick={() => handleSavdoClick(activeSubTab)}
+                     />
+                     <StatCard 
+                        label="Jami Xarajat" 
+                        val={stats.catExpenses} 
+                        icon={<Wallet />} 
+                        color="amber" 
                      />
                      <StatCard 
                         label="Hisoblangan Chiqim" 
@@ -876,13 +950,21 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
                           </div>
                        </div>
                        
-                       <div className="flex items-center gap-4">
-                          <p className={`font-black text-sm ${t.type === 'kirim' ? 'text-green-600' : 'text-red-500'}`}>
+                       <div className="flex items-center gap-2">
+                          <p className={`font-black text-sm mr-2 ${t.type === 'kirim' ? 'text-green-600' : 'text-red-500'}`}>
                              {t.type === 'kirim' ? '+' : '-'}{(t.amount || 0).toLocaleString()}
                           </p>
                           <button 
+                            onClick={() => handleEditTransactionClick(t)}
+                            className="p-2 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                            title="Tahrirlash"
+                          >
+                             <Edit2 size={16} />
+                          </button>
+                          <button 
                             onClick={() => handleDeleteTransaction(t.id)}
                             className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                            title="O'chirish"
                           >
                              <Trash2 size={16} />
                           </button>

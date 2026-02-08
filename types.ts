@@ -48,7 +48,17 @@ export interface Room {
   id: string;
   category_id: string;
   name: string;
-  status: 'free' | 'busy';
+  status: 'free' | 'busy'; // Legacy status, we will calculate real status from bookings
   user_id: string;
+  created_at: string;
+}
+
+export interface Booking {
+  id: string;
+  room_id: string;
+  customer_name: string;
+  phone_number: string;
+  description: string;
+  booking_time: string;
   created_at: string;
 }
