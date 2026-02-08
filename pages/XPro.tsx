@@ -7,7 +7,8 @@ import {
   Edit2, X, Check, ArrowUpRight, ArrowDownRight, 
   Calculator, Download, Printer, Save, Loader2,
   TrendingUp, Coins, Settings2, Calendar, List,
-  ToggleLeft, ToggleRight, GripHorizontal
+  ToggleLeft, ToggleRight, GripHorizontal,
+  LogOut
 } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 import UIModal from '../components/UIModal.tsx';
@@ -18,7 +19,7 @@ import {
   getExpenseCategories, updateTransaction, getDeletionPassword,
   createExpenseCategory, updateExpenseCategory, deleteExpenseCategory,
   saveTransaction, updateShiftManualSum, getCategoryConfigs, upsertCategoryConfig,
-  updateExpenseCategoriesOrder, getShiftById, getAllShifts, updateShiftName
+  updateExpenseCategoriesOrder, getShiftById, getAllShifts, updateShiftName, deleteShift
 } from '../services/supabase.ts';
 
 const StatCard = ({ label, val, icon, color, onClick }: { label: string, val: number, icon: React.ReactNode, color: 'green' | 'red' | 'indigo' | 'amber', onClick?: () => void }) => {
@@ -139,6 +140,52 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
         setLoading(false);
     }
   };
+
+  const handleEditShiftName = () => {
+    if (!activeShift) return;
+    openModal({
+        title: "Smena nomini o'zgartirish",
+        type: 'input',
+        initialValue: activeShift.name,
+        onConfirm: async (val) => {
+            if (val && val.trim()) {
+                await updateShiftName(activeShift.id, val.trim());
+                setActiveShift({ ...activeShift, name: val.trim() });
+            }
+        }
+    });
+  };
+
+  const handleDeleteActiveShift = () => {
+    if (!activeShift) return;
+    openModal({
+        title: "Smenani o'chirish",
+        description: "Diqqat! Ushbu smena va unga tegishli barcha ma'lumotlar o'chib ketadi.",
+        type: 'password',
+        isDanger: true,
+        onConfirm: async (password) => {
+            const correctPassword = await getDeletionPassword();
+            if (password !== correctPassword) return alert("Parol noto'g'ri!");
+            await deleteShift(activeShift.id);
+            setActiveShift(null);
+            initData(); // Refresh to show welcome screen or other shifts
+        }
+    });
+  };
+
+  const handleCloseActiveShift = () => {
+    if (!activeShift) return;
+    openModal({
+      title: "Smenani yopish",
+      description: "Smenani yopishni tasdiqlaysizmi?",
+      type: 'confirm',
+      onConfirm: async () => {
+         await closeShift(activeShift.id);
+         setActiveShift(null);
+         initData();
+      }
+    });
+  }
 
   const handleKassaSumClick = () => {
     openModal({
@@ -552,6 +599,38 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
         </div>
       )}
 
+      {/* Active Shift Header */}
+      <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-slate-100 dark:border-zinc-800 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+         <div>
+             <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">{activeShift.name}</h2>
+             <p className="text-slate-400 font-bold text-xs uppercase mt-1 flex items-center gap-2">
+                <Clock size={12} /> Boshlangan vaqt: {new Date(activeShift.start_date).toLocaleString()}
+             </p>
+         </div>
+         <div className="flex items-center gap-2">
+            <button 
+                onClick={handleEditShiftName}
+                className="p-3 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all"
+                title="Nomni tahrirlash"
+            >
+                <Edit2 size={18} />
+            </button>
+            <button 
+                onClick={handleDeleteActiveShift}
+                className="p-3 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 rounded-xl hover:bg-red-50 hover:text-red-500 dark:hover:text-red-400 transition-all"
+                title="Smenani o'chirish"
+            >
+                <Trash2 size={18} />
+            </button>
+            <button 
+                onClick={handleCloseActiveShift}
+                className="px-4 py-3 bg-slate-900 dark:bg-white text-white dark:text-black font-black text-xs uppercase tracking-widest rounded-xl hover:scale-105 transition-all flex items-center gap-2 shadow-lg dark:shadow-none"
+            >
+                <LogOut size={16} /> Yopish
+            </button>
+         </div>
+      </div>
+
       <div className="flex flex-wrap gap-2">
         {['Kassa', 'Click', 'Uzcard', 'Humo', 'Xarajat', 'Eksport'].map(tab => (
           <button key={tab} onClick={() => { setActiveTab(tab); if (tab === 'Xarajat' && expenseCategories.length > 0 && !activeSubTab) setActiveSubTab(expenseCategories[0].name); }} className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold border text-sm transition-all ${activeTab === tab ? 'bg-slate-900 text-white dark:bg-white dark:text-black border-slate-900 dark:border-white shadow-lg' : 'bg-white dark:bg-zinc-900 text-slate-500 border-slate-100 dark:border-zinc-800 hover:border-slate-300'}`}>{tab}</button>
@@ -711,16 +790,16 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
                   <span className="font-bold text-[12px]">{cat.name}</span>
                   
                   {/* Action Buttons */}
-                  <div className="absolute top-1/2 -translate-y-1/2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                  <div className="absolute -top-2 -right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
                      <button 
                        onClick={(e) => handleEditCategory(e, cat)}
-                       className="w-6 h-6 rounded-full bg-slate-100 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300 flex items-center justify-center hover:bg-indigo-100 hover:text-indigo-600"
+                       className="w-6 h-6 rounded-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 flex items-center justify-center hover:text-indigo-600 shadow-sm"
                      >
                        <Edit2 size={10} />
                      </button>
                      <button 
                        onClick={(e) => handleDeleteCategory(e, cat.id, cat.name)}
-                       className="w-6 h-6 rounded-full bg-slate-100 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300 flex items-center justify-center hover:bg-red-100 hover:text-red-500"
+                       className="w-6 h-6 rounded-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 flex items-center justify-center hover:text-red-500 shadow-sm"
                      >
                        <Trash2 size={10} />
                      </button>
