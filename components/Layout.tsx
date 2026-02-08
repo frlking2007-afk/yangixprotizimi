@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { Home, BarChart2, Settings, Book, Wallet, Search, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Home, BarChart2, Settings, Book, Wallet, Search, ChevronRight, ChevronLeft, CalendarRange } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -35,47 +36,71 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   const menuItems = [
     { id: 'xpro', label: 'XPro', icon: Home },
     { id: 'xisobotlar', label: 'Hisobotlar', icon: BarChart2 },
+    { id: 'bron', label: 'Bron', icon: CalendarRange }, // New Item
     { id: 'notebook', label: 'Daftar', icon: Book },
     { id: 'sozlama', label: 'Sozlamalar', icon: Settings },
   ];
 
+  const showSearch = activeTab === 'xpro' || activeTab === 'notebook';
+
   return (
     <div className="min-h-screen flex bg-slate-50 dark:bg-zinc-950 hacker:bg-black transition-all duration-300">
       
-      {/* Sidebar - Always on the side, doesn't overlay */}
+      {/* Fixed/Sticky Sidebar */}
       <aside className={`
-        relative h-screen bg-white dark:bg-zinc-900 hacker:bg-black border-r border-slate-200 dark:border-zinc-800 hacker:border-[#0f0] transition-all duration-500 ease-in-out z-40
+        sticky top-0 h-screen bg-white dark:bg-zinc-900 hacker:bg-black border-r border-slate-200 dark:border-zinc-800 hacker:border-[#0f0] transition-all duration-500 ease-in-out z-40 shrink-0
         ${isSidebarCollapsed ? 'w-20' : 'w-72'}
       `}>
         <div className="h-full flex flex-col">
           
-          {/* Sidebar Top: Toggle Button & Logo */}
-          <div className="p-5 flex items-center justify-between border-b border-slate-50 dark:border-zinc-800">
-            {!isSidebarCollapsed && (
+          {/* Sidebar Header with Logo and Toggle Button */}
+          <div className={`p-4 flex items-center border-b border-slate-50 dark:border-zinc-800 h-20 ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
+            {!isSidebarCollapsed ? (
               <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-500">
                 {!imgError ? (
-                  <img src={logoSrc} alt="Logo" className="w-8 h-8 rounded-lg object-cover" onError={() => setImgError(true)} />
+                  <img src={logoSrc} alt="Logo" className="w-10 h-10 rounded-xl object-cover" onError={() => setImgError(true)} />
                 ) : (
-                  <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white"><Wallet size={16} /></div>
+                  <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200"><Wallet size={20} /></div>
                 )}
-                <span className="font-black text-lg tracking-tighter dark:text-white hacker:text-[#0f0] uppercase">Xpro</span>
+                <div className="flex flex-col">
+                  <span className="font-black text-xl tracking-tighter dark:text-white hacker:text-[#0f0] uppercase leading-none">Xpro</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Kassa Tizimi</span>
+                </div>
               </div>
+            ) : (
+               <div className="flex items-center justify-center">
+                 {!imgError ? (
+                  <img src={logoSrc} alt="Logo" className="w-9 h-9 rounded-xl object-cover" onError={() => setImgError(true)} />
+                ) : (
+                  <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><Wallet size={18} /></div>
+                )}
+               </div>
             )}
             
-            <button 
-              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className={`
-                p-2 rounded-xl border transition-all duration-300
-                ${isSidebarCollapsed ? 'mx-auto' : ''}
-                bg-slate-50 dark:bg-zinc-800 border-slate-100 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-indigo-600 hover:text-white
-              `}
-            >
-              {isSidebarCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-            </button>
+            {/* Toggle Button - Top Side */}
+            {!isSidebarCollapsed && (
+              <button 
+                onClick={() => setIsSidebarCollapsed(true)}
+                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-xl transition-all"
+              >
+                <ChevronLeft size={20} />
+              </button>
+            )}
           </div>
 
-          {/* Navigation Links */}
-          <nav className="flex-1 px-3 py-8 space-y-3">
+          {/* If collapsed, show open button below logo */}
+          {isSidebarCollapsed && (
+            <div className="flex justify-center py-4 border-b border-slate-50 dark:border-zinc-800">
+               <button 
+                  onClick={() => setIsSidebarCollapsed(false)}
+                  className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-xl transition-all"
+                >
+                  <ChevronRight size={20} />
+                </button>
+            </div>
+          )}
+
+          <nav className="flex-1 px-3 py-6 space-y-2">
             {menuItems.map((item) => (
               <button
                 key={item.id}
@@ -96,15 +121,14 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
             ))}
           </nav>
 
-          {/* User Profile Area (Mini/Full) */}
-          <div className="p-4 mt-auto">
+          <div className="p-4 border-t border-slate-50 dark:border-zinc-800 mt-auto">
             <div className={`flex items-center gap-3 p-3 bg-slate-50 dark:bg-zinc-800 rounded-2xl border border-slate-100 dark:border-zinc-700 ${isSidebarCollapsed ? 'justify-center' : ''}`}>
                <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 shrink-0">
                   <span className="font-black text-sm">AD</span>
                </div>
                {!isSidebarCollapsed && (
                  <div className="overflow-hidden animate-in fade-in duration-500">
-                    <p className="text-xs font-black text-slate-800 dark:text-white truncate">Admin Account</p>
+                    <p className="text-xs font-black text-slate-800 dark:text-white truncate">Admin</p>
                     <p className="text-[10px] font-bold text-slate-400 uppercase">Kassir</p>
                  </div>
                )}
@@ -113,41 +137,38 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 transition-all duration-500">
-        {/* Modern Sticky Header */}
+      <main className="flex-1 flex flex-col min-w-0 transition-all duration-500 overflow-x-hidden">
         <header className="sticky top-0 z-30 h-16 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl border-b border-slate-200 dark:border-zinc-800 hacker:border-[#0f0] flex items-center justify-between px-6 md:px-10 shadow-sm">
           
-          {/* Header Left: Empty or subtle info (since toggle moved to sidebar) */}
-          <div className="w-10 hidden md:block"></div>
+          <div className="w-10"></div>
 
-          {/* Header Center: Elegant Search Bar */}
           <div className="flex-1 flex justify-center max-w-2xl px-6">
-            <div className="relative w-full group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
-              <input 
-                type="text"
-                placeholder="Qidiruv (Ctrl + K)"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-2.5 bg-slate-100 dark:bg-zinc-800/50 border-none rounded-full text-sm outline-none ring-2 ring-transparent focus:ring-indigo-500/10 focus:bg-white dark:focus:bg-zinc-800 transition-all font-medium dark:text-white"
-              />
-            </div>
+            {showSearch && (
+              <div className="relative w-full group animate-in fade-in zoom-in-95 duration-300">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                <input 
+                  type="text"
+                  placeholder="Qidiruv (Ctrl + K)"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-12 pr-4 py-2.5 bg-slate-100 dark:bg-zinc-800/50 border-none rounded-full text-sm outline-none ring-2 ring-transparent focus:ring-indigo-500/10 focus:bg-white dark:focus:bg-zinc-800 transition-all font-medium dark:text-white"
+                />
+              </div>
+            )}
           </div>
 
-          {/* Header Right: Dashboard Title */}
           <div className="min-w-[120px] text-right">
             <h2 className="text-sm md:text-base font-black text-slate-900 dark:text-white hacker:text-[#0f0] uppercase tracking-tighter hacker:font-mono">
               {activeTab === 'xpro' ? 'Dashboard' : 
                activeTab === 'sozlama' ? 'Sozlamalar' : 
                activeTab === 'notebook' ? 'Daftar' : 
+               activeTab === 'bron' ? 'Bron Tizimi' :
                activeTab === 'xisobotlar' ? 'Hisobotlar' : activeTab}
             </h2>
           </div>
         </header>
 
-        {/* Dynamic Content Area */}
-        <div className="flex-1 p-6 md:p-10 overflow-y-auto">
+        <div className="flex-1 p-6 md:p-10">
           {children}
         </div>
       </main>

@@ -7,7 +7,6 @@ export interface Shift {
   start_date: string;
   end_date?: string;
   status: 'active' | 'closed';
-  // Added to fix property access errors in components
   manual_kassa_sum?: number;
 }
 
@@ -23,16 +22,10 @@ export interface Transaction {
   shift_id: string;
   amount: number;
   category: string;
-  sub_category?: string; // Xarajat turi uchun (masalan: Shashlik)
+  sub_category?: string;
   description: string;
   type: TransactionType;
   date: string;
-}
-
-export interface SummaryStats {
-  totalIn: number;
-  totalOut: number;
-  balance: number;
 }
 
 export interface Note {
@@ -41,4 +34,21 @@ export interface Note {
   content: string;
   created_at: string;
   updated_at: string;
+}
+
+// Booking Types
+export interface BookingCategory {
+  id: string;
+  name: string;
+  user_id: string;
+  created_at: string;
+}
+
+export interface Room {
+  id: string;
+  category_id: string;
+  name: string;
+  status: 'free' | 'busy';
+  user_id: string;
+  created_at: string;
 }

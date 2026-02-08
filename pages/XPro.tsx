@@ -15,7 +15,7 @@ import {
   getExpenseCategories, updateTransaction, getDeletionPassword,
   createExpenseCategory, updateExpenseCategory, deleteExpenseCategory,
   saveTransaction, updateShiftManualSum, getCategoryConfigs, upsertCategoryConfig,
-  updateExpenseCategoriesOrder, getShiftById
+  updateExpenseCategoriesOrder, getShiftById, getAllShifts, updateShiftName
 } from '../services/supabase.ts';
 
 const StatCard = ({ label, val, icon, color, onClick }: { label: string, val: number, icon: React.ReactNode, color: 'green' | 'red' | 'indigo' | 'amber', onClick?: () => void }) => {
@@ -50,6 +50,7 @@ interface XProProps {
 
 const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
+  const [activeShiftsList, setActiveShiftsList] = useState<Shift[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,9 +65,10 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
   const [allExpenseFilters, setAllExpenseFilters] = useState<Record<string, { xarajat: boolean, click: boolean, terminal: boolean }>>({});
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
-  // Drag and Drop State
-  const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [tempShiftName, setTempShiftName] = useState('');
 
+  const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const defaultFilter = { xarajat: true, click: false, terminal: false };
 
   const [amountInput, setAmountInput] = useState('');
@@ -81,17 +83,13 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
     setLoading(true);
     try {
       let shift: Shift | null = null;
-      
-      // If a specific shift is requested (e.g., "Continue" from Reports), load it
       if (forcedShiftId) {
         shift = await getShiftById(forcedShiftId);
       } else {
-        // Otherwise load default active shift
         shift = await getActiveShift();
       }
       
       const categories = await getExpenseCategories();
-      
       setActiveShift(shift);
       setExpenseCategories(categories || []);
       
@@ -111,6 +109,9 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
         });
         setManualSavdoSums(sums);
         setAllExpenseFilters(filters);
+      } else {
+        const allShifts = await getAllShifts();
+        setActiveShiftsList(allShifts.filter(s => s.status === 'active'));
       }
 
       if (activeTab === 'Xarajat' && !activeSubTab && categories && categories.length > 0) {
@@ -123,7 +124,6 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
     }
   };
 
-  // Re-run init if forcedShiftId changes
   useEffect(() => { initData(); }, [forcedShiftId]);
 
   const formatAmount = (val: string) => {
@@ -135,8 +135,26 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
     setAmountInput(formatAmount(e.target.value));
   };
 
-  const handleEditAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEditData({ ...editData, amount: formatAmount(e.target.value) });
+  const handleEditShiftName = () => {
+    if (!activeShift) return;
+    setTempShiftName(activeShift.name);
+    setIsRenaming(true);
+  };
+
+  const handleSaveShiftName = async () => {
+    if (!activeShift || !tempShiftName.trim() || tempShiftName === activeShift.name) {
+      setIsRenaming(false);
+      return;
+    }
+    
+    try {
+      await updateShiftName(activeShift.id, tempShiftName.trim());
+      setActiveShift({ ...activeShift, name: tempShiftName.trim() });
+      setIsRenaming(false);
+    } catch (err: any) {
+      alert("Xato: " + err.message);
+      setIsRenaming(false);
+    }
   };
 
   const calculateCatStats = (catName: string) => {
@@ -266,11 +284,9 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
     }
   };
 
-  // --- Drag and Drop Logic ---
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDraggedItemId(id);
     e.dataTransfer.effectAllowed = 'move';
-    // Add custom ghost image or transparency if needed
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -281,18 +297,13 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
   const handleDrop = async (e: React.DragEvent, targetId: string) => {
     e.preventDefault();
     if (draggedItemId === targetId || !draggedItemId) return;
-
     const items = [...expenseCategories];
     const dragIndex = items.findIndex(item => item.id === draggedItemId);
     const dropIndex = items.findIndex(item => item.id === targetId);
-
     const [draggedItem] = items.splice(dragIndex, 1);
     items.splice(dropIndex, 0, draggedItem);
-
     setExpenseCategories(items);
     setDraggedItemId(null);
-
-    // Persist new order to Supabase
     await updateExpenseCategoriesOrder(items);
   };
 
@@ -301,7 +312,7 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
     if (password === null) return;
     if (password !== await getDeletionPassword()) return alert("Parol noto'g'ri!");
     setEditingId(t.id);
-    setEditData({ amount: t.amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' '), description: t.description || '' });
+    setEditData({ amount: formatAmount(t.amount.toString()), description: t.description || '' });
   };
 
   const saveEdit = async (e: React.FormEvent, id: string) => {
@@ -341,52 +352,32 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
             .divider { border-top: 2px dashed black; margin: 15px 0; }
             .row { display: flex; justify-content: space-between; margin-bottom: 5px; }
             .label { color: black; font-size: 10pt; text-transform: uppercase; font-weight: 900; }
-            .list-title { font-size: 14pt; margin: 20px 0 10px 0; font-weight: 900; text-transform: uppercase; }
-            
-            /* Yangi Xarajat Dizayni */
-            .item-box { 
-              border: 2px solid black; 
-              padding: 10px; 
-              margin-bottom: 8px; 
-              font-size: 12pt; 
-              font-weight: 900; 
-              display: flex; 
-              justify-content: space-between; 
-              align-items: center; 
-              border-radius: 4px;
-            }
-            
-            .total-row { font-size: 14pt; margin-top: 10px; background: #eee; padding: 10px; border: 2px solid black; font-weight: 900; }
+            .item-box { border-bottom: 1px solid #eee; padding: 8px 0; font-size: 11pt; font-weight: 500; display: flex; justify-content: space-between; align-items: center; }
+            .total-row { font-size: 14pt; margin-top: 10px; background: white; padding: 12px; border: 2px solid black; font-weight: 900; border-radius: 20px; text-align: center; }
+            .list-title { font-weight: 900; text-transform: uppercase; border-bottom: 2px solid black; display: inline-block; margin: 20px 0 10px 0; font-size: 11pt; }
           </style>
         </head>
         <body>
-          <div class="center black header">X-PRO</div>
-          <div class="center bold" style="font-size: 14pt; margin-bottom: 10px;">${now.toLocaleDateString()} ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-          
-          <div class="center black" style="font-size: 22pt; margin: 15px 0; text-transform: uppercase;">${catName}</div>
-          
+          <div class="center black header">XPRO KASSA</div>
+          <div class="center" style="font-size: 9pt; margin-bottom: 5px; font-weight: 800;">📅 ${now.toLocaleDateString()}  🕒 ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+          <div class="center bold" style="font-size: 8pt; text-transform: uppercase;">${activeShift.name}</div>
           <div class="divider"></div>
           
-          <div class="row"><span class="label">Savdo:</span><span class="black" style="font-size: 12pt;">${stats.savdo.toLocaleString()}</span></div>
-          <div class="row"><span class="label">Xarajat:</span><span class="black" style="font-size: 12pt;">${stats.catExpenses.toLocaleString()}</span></div>
-          ${stats.filters.click ? `<div class="row"><span class="label">Click:</span><span class="black" style="font-size: 12pt;">${stats.clickSum.toLocaleString()}</span></div>` : ''}
-          ${stats.filters.terminal ? `<div class="row"><span class="label">Terminal:</span><span class="black" style="font-size: 12pt;">${stats.terminalSum.toLocaleString()}</span></div>` : ''}
+          <div class="row"><span class="label">NOMI:</span><span class="black" style="font-size: 12pt;">${catName}</span></div>
+          <div class="row"><span class="label">SAVDO:</span><span class="black" style="font-size: 12pt;">${stats.savdo.toLocaleString()}</span></div>
+          <div class="row"><span class="label">XARAJAT:</span><span class="black" style="font-size: 12pt;">${stats.catExpenses.toLocaleString()}</span></div>
+          <div class="divider" style="border-style: dashed;"></div>
+          
+          <div class="total-row">
+            <span style="font-size: 10pt; color: #666; vertical-align: middle;">QOLGAN PUL</span>
+            <span style="font-size: 16pt; margin-left: 10px; vertical-align: middle;">${stats.balance.toLocaleString()} so'm</span>
+          </div>
+
+          <div class="list-title">XARAJATLAR RO'YXATI:</div>
+          ${stats.transactions.map(t => `<div class="item-box"><span>${t.description || 'Xarajat'}</span><span>${t.amount.toLocaleString()}</span></div>`).join('')}
           
           <div class="divider"></div>
-          <div class="row black total-row"><span>QOLGAN PUL:</span><span>${stats.balance.toLocaleString()}</span></div>
-          
-          <div class="divider"></div>
-          <div class="black list-title">XARAJATLAR RO'YXATI:</div>
-          
-          ${stats.transactions.map(t => `
-            <div class="item-box">
-              <span>${t.description || 'Xarajat'}</span>
-              <span>${t.amount.toLocaleString()}</span>
-            </div>
-          `).join('')}
-          
-          <div class="center" style="font-size: 10pt; margin-top: 30px; font-weight: 900;">X-PRO SYSTEM</div>
-          <div style="height: 50px;"></div>
+          <div class="center" style="font-size: 9pt; margin-top: 20px; font-weight: 900; letter-spacing: 1px;">XPRO MANAGEMENT SYSTEM</div>
           <script>window.onload=function(){window.print();setTimeout(function(){window.close();},500);};</script>
         </body>
       </html>
@@ -399,55 +390,13 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
     if (!el) return;
     setExportingId(catName);
     try {
-      const dataUrl = await htmlToImage.toPng(el, { 
-        cacheBust: true, 
-        backgroundColor: '#fff', 
-        pixelRatio: 3,
-        style: {
-          borderRadius: '0'
-        }
-      });
+      const dataUrl = await htmlToImage.toPng(el, { cacheBust: true, backgroundColor: '#fff', pixelRatio: 3 });
       const link = document.createElement('a');
       link.download = `xisobot-${catName.toLowerCase()}-${new Date().toISOString().slice(0,10)}.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) { alert('Rasm yuklashda xatolik.'); } finally { setExportingId(null); }
   };
-
-  const toggleFilter = async (key: keyof typeof defaultFilter) => {
-    if (!activeSubTab || !activeShift) return;
-    const subTabFilters = { ...(allExpenseFilters[activeSubTab] || defaultFilter) };
-    subTabFilters[key] = !subTabFilters[key];
-    setAllExpenseFilters({ ...allExpenseFilters, [activeSubTab]: subTabFilters });
-    await upsertCategoryConfig(activeShift.id, activeSubTab, { filters: subTabFilters });
-  };
-
-  // Base expenses (Click, Uzcard, Humo, Xarajat transactions)
-  const baseExpenses = transactions
-    .filter(t => ['Click', 'Uzcard', 'Humo', 'Xarajat'].includes(t.category))
-    .reduce((acc, curr) => acc + (curr.amount || 0), 0);
-
-  // Profit addition logic: Sum Max(0, Profit) for each category
-  const positiveProfitSum = expenseCategories.reduce((acc, cat) => {
-    const stats = calculateCatStats(cat.name);
-    return acc + (stats.balance > 0 ? stats.balance : 0);
-  }, 0);
-
-  // Total Expenses = Base + Positive Profits
-  const totalExpensesAcrossTypes = baseExpenses + positiveProfitSum;
-  
-  const totalBalance = manualKassaSum - totalExpensesAcrossTypes;
-
-  // Calculate current category total
-  const currentCategoryTotal = transactions
-    .filter(t => t.category === activeTab)
-    .reduce((acc, curr) => acc + (curr.amount || 0), 0);
-
-  const currentFilters = activeSubTab ? (allExpenseFilters[activeSubTab] || defaultFilter) : defaultFilter;
-  const filteredTransactions = transactions.filter(t => {
-    if (activeTab === 'Xarajat') return t.category === 'Xarajat' && (activeSubTab ? t.sub_category === activeSubTab : true);
-    return t.category === activeTab;
-  });
 
   const mainTabs = [
     { name: 'Kassa', icon: Banknote }, { name: 'Click', icon: CreditCard }, { name: 'Uzcard', icon: Wallet },
@@ -462,70 +411,115 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
   );
 
   if (!activeShift) return (
-    <div className="flex flex-col items-center justify-center h-[70vh] text-center px-4">
-      <PlayCircle size={48} className="text-indigo-600 mb-6 animate-pulse" />
-      <h2 className="text-3xl font-black text-slate-800 dark:text-white mb-3">Xush kelibsiz!</h2>
-      <button onClick={handleStartShift} className="px-10 py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-xl flex items-center gap-3">
-        <PlayCircle size={24} /> Hisobotni boshlash
-      </button>
+    <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4 animate-in fade-in duration-700">
+      <div className="max-w-xl w-full space-y-12">
+        <div className="space-y-6">
+          <div className="w-24 h-24 bg-indigo-50 dark:bg-zinc-800 rounded-3xl mx-auto flex items-center justify-center text-indigo-600 shadow-xl shadow-indigo-100 dark:shadow-none animate-bounce">
+            <PlayCircle size={48} />
+          </div>
+          <h2 className="text-5xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Xush kelibsiz!</h2>
+          <p className="text-slate-400 font-medium text-lg">Kassa operatsiyalarini boshlash uchun yangi smena oching yoki faol hisobotlarni davom ettiring.</p>
+        </div>
+        <button onClick={handleStartShift} className="group relative w-full md:w-auto px-16 py-6 bg-slate-900 dark:bg-indigo-600 text-white font-black rounded-[2rem] shadow-2xl transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-3 text-xl">
+          <Plus size={24} /> <span>Hisobotni boshlash</span>
+        </button>
+        {activeShiftsList.length > 0 && (
+          <div className="space-y-6 pt-12 border-t border-slate-100 dark:border-zinc-800">
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em]">Faol xisobotlar</h3>
+            <div className="grid grid-cols-1 gap-3">
+              {activeShiftsList.map((s) => (
+                <div key={s.id} onClick={() => setActiveShift(s)} className="group bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 p-6 rounded-[2.5rem] flex items-center justify-between hover:border-indigo-400 cursor-pointer transition-all">
+                  <div className="flex items-center gap-5">
+                    <div className="w-14 h-14 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center"><Clock size={28} /></div>
+                    <div className="text-left">
+                      <h4 className="font-black text-slate-800 dark:text-white text-lg">{s.name}</h4>
+                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">{new Date(s.start_date).toLocaleString()}</p>
+                    </div>
+                  </div>
+                  <div className="text-indigo-600 font-black text-sm uppercase opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2">Davom etish <ArrowUpRight size={18} /></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 
+  const baseExpensesTotal = transactions.filter(t => ['Click', 'Uzcard', 'Humo', 'Xarajat'].includes(t.category)).reduce((acc, curr) => acc + (curr.amount || 0), 0);
+  const positiveProfitSum = expenseCategories.reduce((acc, cat) => {
+    const stats = calculateCatStats(cat.name);
+    return acc + (stats.balance > 0 ? stats.balance : 0);
+  }, 0);
+  const totalExpensesAcrossTypes = baseExpensesTotal + positiveProfitSum;
+  const totalBalance = manualKassaSum - totalExpensesAcrossTypes;
+  const currentCategoryTotal = transactions.filter(t => t.category === activeTab).reduce((acc, curr) => acc + (curr.amount || 0), 0);
+  const filteredTransactions = transactions.filter(t => {
+    if (activeTab === 'Xarajat') return t.category === 'Xarajat' && (activeSubTab ? t.sub_category === activeSubTab : true);
+    return t.category === activeTab;
+  });
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20 no-print">
-      {/* Settings Modal */}
-      {isFilterModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 hacker:bg-black/80 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-zinc-900 hacker:bg-black w-full max-sm rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 dark:border-zinc-800 space-y-6">
+      {isFilterModalOpen && activeSubTab && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 dark:border-zinc-800 space-y-6">
             <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-black text-slate-800 dark:text-white hacker:text-[#0f0]">Hisoblash sozlamalari</h3>
-                <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">{activeSubTab}</p>
-              </div>
+              <div><h3 className="text-xl font-black text-slate-800 dark:text-white">Sozlamalar</h3><p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">{activeSubTab}</p></div>
               <button onClick={() => setIsFilterModalOpen(false)} className="p-2 text-slate-400 hover:bg-slate-50 rounded-full transition-colors"><X size={20} /></button>
             </div>
             <div className="space-y-3">
-              {['xarajat', 'click', 'terminal'].map((key) => (
-                <label key={key} className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 dark:border-zinc-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-all">
-                  <input 
-                    type="checkbox" 
-                    checked={currentFilters[key as keyof typeof defaultFilter]} 
-                    onChange={() => toggleFilter(key as keyof typeof defaultFilter)}
-                    className="w-6 h-6 rounded-lg text-indigo-600 focus:ring-indigo-500 border-slate-300"
-                  />
-                  <div className="flex-1">
-                    <p className="font-bold text-slate-800 dark:text-white capitalize">{key}ni hisoblash</p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{key === 'xarajat' ? `Faqat ${activeSubTab} chiqimlari` : key === 'click' ? "Barcha clicklar" : "Uzcard va Humo"}</p>
-                  </div>
-                </label>
-              ))}
+              {['xarajat', 'click', 'terminal'].map((key) => {
+                const curFilters = allExpenseFilters[activeSubTab] || defaultFilter;
+                return (
+                  <label key={key} className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 dark:border-zinc-800 cursor-pointer hover:bg-slate-50 transition-all">
+                    <input type="checkbox" checked={curFilters[key as keyof typeof defaultFilter]} onChange={async () => {
+                      const newF = { ...curFilters, [key]: !curFilters[key as keyof typeof defaultFilter] };
+                      setAllExpenseFilters({ ...allExpenseFilters, [activeSubTab]: newF });
+                      await upsertCategoryConfig(activeShift.id, activeSubTab, { filters: newF });
+                    }} className="w-6 h-6 rounded-lg text-indigo-600 focus:ring-indigo-500 border-slate-300" />
+                    <div className="flex-1"><p className="font-bold text-slate-800 dark:text-white capitalize">{key}ni hisoblash</p></div>
+                  </label>
+                );
+              })}
             </div>
-            <button onClick={() => setIsFilterModalOpen(false)} className="w-full py-4 bg-slate-900 dark:bg-indigo-600 text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all">Tayyor</button>
+            <button onClick={() => setIsFilterModalOpen(false)} className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl active:scale-95 transition-all">Tayyor</button>
           </div>
         </div>
       )}
 
-      <div className="bg-white dark:bg-zinc-900 hacker:bg-black p-4 rounded-2xl border border-slate-100 dark:border-zinc-800 shadow-sm flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Clock size={20} className="text-green-600" />
-          <h3 className="font-bold text-slate-800 dark:text-white hacker:text-[#0f0] text-sm">{activeShift.name}</h3>
+      {/* Smena Sarlavhasi / Inline Tahrirlash */}
+      <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-slate-100 dark:border-zinc-800 shadow-sm flex items-center justify-between">
+        <div className="flex items-center gap-3 flex-1">
+          <Clock size={20} className="text-green-600 shrink-0" />
+          {isRenaming ? (
+            <div className="flex items-center gap-2 flex-1 animate-in slide-in-from-left-2">
+              <input 
+                autoFocus
+                type="text"
+                value={tempShiftName}
+                onChange={(e) => setTempShiftName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSaveShiftName()}
+                className="flex-1 px-3 py-1.5 bg-slate-50 dark:bg-zinc-800 border border-indigo-200 dark:border-indigo-900 rounded-lg outline-none font-bold text-sm dark:text-white"
+              />
+              <button onClick={handleSaveShiftName} className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"><Check size={18} /></button>
+              <button onClick={() => setIsRenaming(false)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"><X size={18} /></button>
+            </div>
+          ) : (
+            <h3 className="font-bold text-slate-800 dark:text-white text-sm truncate">{activeShift.name}</h3>
+          )}
         </div>
-        <button onClick={() => closeShift(activeShift.id).then(() => window.location.reload())} className="px-4 py-2 bg-red-50 text-red-600 font-bold rounded-xl text-xs">Yopish</button>
+        <div className="flex items-center gap-2 ml-4">
+          {!isRenaming && (
+            <button onClick={handleEditShiftName} className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-bold rounded-xl text-xs flex items-center gap-2 hover:bg-indigo-100 transition-all"><Edit2 size={14} /> Tahrirlash</button>
+          )}
+          <button onClick={() => closeShift(activeShift.id).then(() => window.location.reload())} className="px-4 py-2 bg-red-50 text-red-600 font-bold rounded-xl text-xs hover:bg-red-100 transition-all">Yopish</button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
         {mainTabs.map((tab) => (
-          <button
-            key={tab.name}
-            onClick={() => {
-              setActiveTab(tab.name);
-              if (tab.name === 'Xarajat' && expenseCategories.length > 0 && !activeSubTab) setActiveSubTab(expenseCategories[0].name);
-              else if (tab.name !== 'Xarajat' && tab.name !== 'Eksport') setActiveSubTab(null);
-            }}
-            className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold transition-all border text-sm ${
-              activeTab === tab.name ? 'bg-slate-900 text-white border-slate-900' : 'bg-white dark:bg-zinc-900 text-slate-500 border-slate-100 dark:border-zinc-800'
-            }`}
-          >
+          <button key={tab.name} onClick={() => { setActiveTab(tab.name); if (tab.name === 'Xarajat' && expenseCategories.length > 0 && !activeSubTab) setActiveSubTab(expenseCategories[0].name); }} className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold transition-all border text-sm ${activeTab === tab.name ? 'bg-slate-900 text-white border-slate-900' : 'bg-white dark:bg-zinc-900 text-slate-500 border-slate-100 dark:border-zinc-800'}`}>
             <tab.icon size={16} /> {tab.name}
           </button>
         ))}
@@ -540,86 +534,58 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
               <div key={cat.id} className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-slate-100 dark:border-zinc-800 shadow-sm overflow-hidden flex flex-col group">
                 {/* Visual Preview for Image Generation */}
                 <div 
-                   ref={(el) => { exportRefs.current[cat.name] = el; }} 
-                   className="p-10 bg-white text-slate-900 w-[500px] mx-auto flex flex-col items-stretch"
-                   style={{ minHeight: 'auto' }}
+                  ref={(el) => { exportRefs.current[cat.name] = el; }} 
+                  className="p-10 bg-white text-slate-900 w-[500px] mx-auto flex flex-col items-stretch"
                 >
-                   <div className="text-center mb-10">
-                      <h4 className="font-black text-3xl tracking-tighter text-black uppercase mb-2">XPRO KASSA</h4>
-                      <div className="flex flex-col items-center justify-center gap-1 text-[12px] text-black font-black uppercase tracking-widest">
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-1.5"><Calendar size={12} /> {now.toLocaleDateString()}</div>
-                          <div className="flex items-center gap-1.5"><Clock size={12} /> {now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-                        </div>
-                        <div className="mt-1 border-t border-black pt-1 px-4">{activeShift.name}</div>
+                   <div className="text-center mb-6">
+                      <h4 className="font-black text-3xl text-black uppercase mb-2">XPRO KASSA</h4>
+                      <div className="flex items-center justify-center gap-4 text-[11px] font-black text-slate-600">
+                        <span className="flex items-center gap-1"><Calendar size={12} /> {now.toLocaleDateString()}</span>
+                        <span className="flex items-center gap-1"><Clock size={12} /> {now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                       </div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 border-t pt-2 border-slate-100">{activeShift.name}</p>
                    </div>
 
-                   <div className="space-y-4 mb-8">
-                      <div className="flex justify-between items-center border-b-2 border-slate-100 pb-3">
-                         <span className="text-[12px] font-black text-black uppercase tracking-[0.2em] flex-shrink-0">Nomi</span>
-                         <span className="font-black text-black text-right text-lg ml-4 break-words">{cat.name}</span>
+                   <div className="space-y-4 mb-6">
+                      <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Nomi</span>
+                        <span className="font-black text-lg text-black">{cat.name}</span>
                       </div>
-                      <div className="flex justify-between items-center border-b border-slate-50 pb-2">
-                         <span className="text-[12px] font-black text-black uppercase tracking-[0.2em] flex-shrink-0">Savdo</span>
-                         <span className="font-black text-lg text-black">{stats.savdo.toLocaleString()}</span>
+                      <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Savdo</span>
+                        <span className="font-black text-lg text-black">{stats.savdo.toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between items-center border-b border-slate-50 pb-2">
-                         <span className="text-[12px] font-black text-black uppercase tracking-[0.2em] flex-shrink-0">Xarajat</span>
-                         <span className="font-black text-lg text-black">{stats.catExpenses.toLocaleString()}</span>
+                      <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Xarajat</span>
+                        <span className="font-black text-lg text-black">{stats.catExpenses.toLocaleString()}</span>
                       </div>
-                      {stats.filters.click && (
-                        <div className="flex justify-between items-center border-b border-slate-50 pb-2">
-                           <span className="text-[12px] font-black text-black uppercase tracking-[0.2em] flex-shrink-0">Click</span>
-                           <span className="font-black text-lg text-black">{stats.clickSum.toLocaleString()}</span>
-                        </div>
-                      )}
-                      {stats.filters.terminal && (
-                        <div className="flex justify-between items-center border-b border-slate-50 pb-2">
-                           <span className="text-[12px] font-black text-black uppercase tracking-[0.2em] flex-shrink-0">Terminal</span>
-                           <span className="font-black text-lg text-black">{stats.terminalSum.toLocaleString()}</span>
-                        </div>
-                      )}
                       
-                      <div className="pt-6 border-t-2 border-dashed border-black mt-6">
-                         <div className="flex justify-between items-center p-5 bg-slate-100 border border-black rounded-3xl">
-                            <span className="text-xs font-black text-black uppercase tracking-widest">Qolgan Pul</span>
-                            <span className="text-2xl font-black text-black text-right">{stats.balance.toLocaleString()} so'm</span>
-                         </div>
+                      <div className="pt-4 border-t-2 border-dashed border-slate-200 mt-4">
+                        <div className="flex justify-between items-center p-6 bg-white border-2 border-black rounded-[2rem] shadow-sm">
+                           <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Qolgan Pul</span>
+                           <span className="text-2xl font-black text-black">{stats.balance.toLocaleString()} so'm</span>
+                        </div>
                       </div>
                    </div>
 
-                   <div className="space-y-2">
-                      <p className="text-[12px] font-black text-black uppercase mb-4 border-b-2 border-black inline-block tracking-widest">Xarajatlar Ro'yxati:</p>
-                      <div className="space-y-1.5">
-                        {stats.transactions.length > 0 ? (
-                          stats.transactions.map(t => (
-                            <div key={t.id} className="flex justify-between items-start text-[12px] py-1.5 border-b border-slate-50">
-                               <span className="font-bold text-black pr-4 break-words">{t.description || 'Xarajat'}</span>
-                               <span className="font-black text-black flex-shrink-0">{(t.amount || 0).toLocaleString()}</span>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-[12px] italic text-slate-400 py-2">Ro'yxat bo'sh</p>
-                        )}
-                      </div>
+                   <div className="space-y-2 mb-8">
+                      <h5 className="text-[10px] font-black uppercase text-black border-b-2 border-black inline-block mb-2">Xarajatlar ro'yxati:</h5>
+                      {stats.transactions.map((t, i) => (
+                        <div key={i} className="flex justify-between items-center text-[13px] py-1.5 border-b border-slate-50">
+                          <span className="font-bold text-slate-800">{t.description || 'Xarajat'}</span>
+                          <span className="font-black text-black">{t.amount.toLocaleString()}</span>
+                        </div>
+                      ))}
                    </div>
-                   
-                   <div className="mt-auto pt-10 text-center">
-                      <p className="text-[10px] font-black text-black uppercase tracking-[0.3em] border-t border-black pt-4">XPRO MANAGEMENT SYSTEM</p>
+
+                   <div className="mt-auto text-center border-t border-slate-100 pt-6">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">XPRO MANAGEMENT SYSTEM</p>
                    </div>
                 </div>
-
-                {/* Actions UI */}
+                
                 <div className="bg-slate-50 dark:bg-zinc-800/50 p-6 flex gap-3 border-t border-slate-100 dark:border-zinc-800 mt-auto">
                   <button onClick={() => handlePrint(cat.name)} className="flex-1 py-4 bg-white dark:bg-zinc-900 border dark:border-zinc-700 rounded-2xl flex items-center justify-center gap-2 text-xs font-black hover:bg-slate-100 transition-all"><Printer size={16} /> Chop etish</button>
-                  <button 
-                    onClick={() => handleDownloadImage(cat.name)} 
-                    disabled={exportingId !== null} 
-                    className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl flex items-center justify-center gap-2 text-xs font-black disabled:opacity-50 hover:bg-indigo-700 transition-all shadow-lg"
-                  >
-                     {exportingId === cat.name ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} Rasm
-                  </button>
+                  <button onClick={() => handleDownloadImage(cat.name)} disabled={exportingId !== null} className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl flex items-center justify-center gap-2 text-xs font-black disabled:opacity-50 hover:bg-indigo-700 transition-all shadow-lg">{exportingId === cat.name ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} Rasm</button>
                 </div>
               </div>
             );
@@ -627,33 +593,17 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Summary Stat for Click, Uzcard, Humo, Xarajat */}
-          {['Click', 'Uzcard', 'Humo', 'Xarajat'].includes(activeTab) && (
-            <div className="grid grid-cols-1 md:grid-cols-1 gap-4 animate-in slide-in-from-top-2 duration-300">
-              <StatCard 
-                label={`Umumiy ${activeTab} Summasi`} 
-                val={currentCategoryTotal} 
-                icon={activeTab === 'Xarajat' ? <TrendingDown /> : <ArrowUpRight />} 
-                color={activeTab === 'Xarajat' ? 'red' : 'green'} 
-              />
+          {activeTab === 'Kassa' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <StatCard label="Kassa Summasi" val={manualKassaSum} icon={<ArrowUpRight />} color="green" onClick={handleKassaSumClick} />
+              <StatCard label="Umumiy Chiqim" val={totalExpensesAcrossTypes} icon={<ArrowDownRight />} color="red" />
+              <StatCard label="Balans" val={totalBalance} icon={<Calculator />} color="indigo" />
             </div>
           )}
-
           {activeTab === 'Xarajat' && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 animate-in slide-in-from-top-2 duration-300">
-              {expenseCategories.map((cat, index) => (
-                <div 
-                  key={cat.id} 
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, cat.id)}
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, cat.id)}
-                  className={`relative h-12 rounded-xl border transition-all cursor-move flex items-center justify-center p-2 
-                    ${activeSubTab === cat.name ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-zinc-900 text-slate-600 border-slate-100 dark:border-zinc-800'}
-                    ${draggedItemId === cat.id ? 'opacity-30 border-dashed scale-95' : 'opacity-100'}
-                  `} 
-                  onClick={() => setActiveSubTab(cat.name)}
-                >
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+              {expenseCategories.map((cat) => (
+                <div key={cat.id} draggable onDragStart={(e) => handleDragStart(e, cat.id)} onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, cat.id)} className={`relative h-12 rounded-xl border transition-all cursor-move flex items-center justify-center p-2 ${activeSubTab === cat.name ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-zinc-900 text-slate-600 border-slate-100 dark:border-zinc-800'}`} onClick={() => setActiveSubTab(cat.name)}>
                   <span className="font-bold text-center text-[12px]">{cat.name}</span>
                   <div className="absolute -top-1.5 -right-1.5 flex gap-1 bg-white dark:bg-zinc-800 p-0.5 rounded-lg shadow-md border border-slate-100 z-10">
                      <button onClick={(e) => handleEditCategoryName(e, cat.id, cat.name)} className="p-1 text-slate-400 hover:text-indigo-600"><Edit2 size={10} /></button>
@@ -664,76 +614,34 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
               <button onClick={handleAddCategory} className="h-12 rounded-xl border-2 border-dashed border-indigo-200 flex items-center justify-center text-indigo-500 hover:bg-indigo-50 transition-colors"><Plus size={20} /></button>
             </div>
           )}
-
-          {activeTab === 'Kassa' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <StatCard label="Kassa Summasi" val={manualKassaSum} icon={<ArrowUpRight />} color="green" onClick={handleKassaSumClick} />
-              <StatCard label="Umumiy Chiqim" val={totalExpensesAcrossTypes} icon={<ArrowDownRight />} color="red" />
-              <StatCard label="Balans" val={totalBalance} icon={<Calculator />} color="indigo" />
-            </div>
-          )}
-
           {activeTab !== 'Kassa' && (
-            <form onSubmit={handleSaveTransaction} className="bg-white dark:bg-zinc-900 hacker:bg-black p-6 rounded-[2.5rem] border border-slate-100 dark:border-zinc-800 shadow-sm space-y-4 animate-in fade-in duration-300">
-               <div className="flex items-center gap-2 mb-2">
-                  <Plus size={18} className="text-indigo-600" />
-                  <h4 className="font-bold text-sm uppercase tracking-widest text-slate-800 dark:text-white">Yangi operatsiya ({activeTab})</h4>
-               </div>
+            <form onSubmit={handleSaveTransaction} className="bg-white dark:bg-zinc-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-zinc-800 shadow-sm space-y-4">
+               <div className="flex items-center gap-2 mb-2"><Plus size={18} className="text-indigo-600" /><h4 className="font-bold text-sm uppercase tracking-widest text-slate-800 dark:text-white">Yangi operatsiya ({activeTab})</h4></div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <input type="text" value={amountInput} onChange={handleAmountChange} placeholder="Summa (0)" className="w-full px-5 py-4 bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800 rounded-2xl outline-none font-black text-lg dark:text-white" />
                   <input type="text" value={descInput} onChange={(e) => setDescInput(e.target.value)} placeholder="Tavsif (ixtiyoriy)" className="w-full px-5 py-4 bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800 rounded-2xl outline-none font-medium dark:text-white" />
                </div>
-               <button type="submit" disabled={isSaving} className="w-full py-4 bg-slate-900 dark:bg-indigo-600 text-white font-black rounded-2xl flex items-center justify-center gap-3 hover:bg-black transition-all disabled:opacity-50">
-                  {isSaving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />} Saqlash
-               </button>
+               <button type="submit" disabled={isSaving} className="w-full py-4 bg-slate-900 dark:bg-indigo-600 text-white font-black rounded-2xl flex items-center justify-center gap-3 hover:bg-black transition-all disabled:opacity-50">{isSaving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />} Saqlash</button>
             </form>
           )}
-
           {activeTab === 'Xarajat' && activeSubTab && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in duration-500">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {(() => {
                 const stats = calculateCatStats(activeSubTab);
-                return (
-                  <>
-                    <StatCard label={`${activeSubTab} - Savdo`} val={stats.savdo} icon={<Coins />} color="green" onClick={handleSavdoSumClick} />
-                    <StatCard label={`${activeSubTab} - Hisoblangan Xarajat`} val={stats.totalDeduction} icon={<Settings2 />} color="red" onClick={() => setIsFilterModalOpen(true)} />
-                    <StatCard label={`${activeSubTab} - Foyda`} val={stats.balance} icon={<TrendingUp />} color="indigo" />
-                  </>
-                );
+                return (<><StatCard label={`${activeSubTab} - Savdo`} val={stats.savdo} icon={<Coins />} color="green" onClick={handleSavdoSumClick} /><StatCard label={`${activeSubTab} - Chiqim`} val={stats.totalDeduction} icon={<Settings2 />} color="red" onClick={() => setIsFilterModalOpen(true)} /><StatCard label={`${activeSubTab} - Foyda`} val={stats.balance} icon={<TrendingUp />} color="indigo" /></>);
               })()}
             </div>
           )}
-
           {activeTab !== 'Kassa' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between px-2">
-                <h3 className="font-bold text-slate-800 dark:text-white text-sm uppercase tracking-widest">Amallar ({filteredTransactions.length})</h3>
-              </div>
+              <h3 className="font-bold text-slate-800 dark:text-white text-sm uppercase px-2">Amallar ({filteredTransactions.length})</h3>
               <div className="space-y-2.5">
                 {filteredTransactions.map((t) => (
                   <div key={t.id} className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-slate-100 dark:border-zinc-800 shadow-sm group">
                     {editingId === t.id ? (
-                      <form onSubmit={(e) => saveEdit(e, t.id)} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-3">
-                          <input value={editData.amount} onChange={handleEditAmountChange} className="w-full p-3 bg-slate-50 dark:bg-zinc-800 border rounded-xl text-sm font-bold" />
-                          <input value={editData.description} onChange={(e) => setEditData({...editData, description: e.target.value})} className="w-full p-3 bg-slate-50 dark:bg-zinc-800 border rounded-xl text-sm font-medium" />
-                        </div>
-                        <div className="flex justify-end gap-3">
-                          <button type="button" onClick={() => setEditingId(null)} className="text-xs font-bold text-slate-500">Bekor qilish</button>
-                          <button type="submit" className="px-5 py-2 bg-green-600 text-white text-xs font-bold rounded-xl">Saqlash</button>
-                        </div>
-                      </form>
+                      <form onSubmit={(e) => saveEdit(e, t.id)} className="space-y-4"><div className="grid grid-cols-2 gap-3"><input value={editData.amount} onChange={(e) => setEditData({ ...editData, amount: formatAmount(e.target.value) })} className="w-full p-3 bg-slate-50 dark:bg-zinc-800 border rounded-xl text-sm font-bold" /><input value={editData.description} onChange={(e) => setEditData({...editData, description: e.target.value})} className="w-full p-3 bg-slate-50 dark:bg-zinc-800 border rounded-xl text-sm font-medium" /></div><div className="flex justify-end gap-3"><button type="button" onClick={() => setEditingId(null)} className="text-xs font-bold text-slate-500">Bekor qilish</button><button type="submit" className="px-5 py-2 bg-green-600 text-white text-xs font-bold rounded-xl">Saqlash</button></div></form>
                     ) : (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t.type === 'kirim' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{t.type === 'kirim' ? <Plus size={18} /> : <TrendingDown size={18} />}</div>
-                          <div><p className="font-bold text-slate-800 dark:text-white text-[13px]">{t.description || 'Tavsifsiz'}</p><p className="text-[10px] text-slate-400 uppercase font-bold">{t.sub_category || t.category}</p></div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <p className={`font-black text-sm ${t.type === 'kirim' ? 'text-green-600' : 'text-red-500'}`}>{(t.amount || 0).toLocaleString()}</p>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all"><button onClick={() => startEdit(t)} className="p-1 text-slate-400"><Edit2 size={14} /></button><button onClick={() => handleDelete(t.id)} className="p-1 text-slate-400"><Trash2 size={14} /></button></div>
-                        </div>
-                      </div>
+                      <div className="flex items-center justify-between"><div className="flex items-center gap-4"><div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t.type === 'kirim' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{t.type === 'kirim' ? <Plus size={18} /> : <TrendingDown size={18} />}</div><div><p className="font-bold text-slate-800 dark:text-white text-[13px]">{t.description || 'Tavsifsiz'}</p><p className="text-[10px] text-slate-400 uppercase font-bold">{t.sub_category || t.category}</p></div></div><div className="flex items-center gap-4"><p className={`font-black text-sm ${t.type === 'kirim' ? 'text-green-600' : 'text-red-500'}`}>{(t.amount || 0).toLocaleString()}</p><div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all"><button onClick={() => startEdit(t)} className="p-1 text-slate-400"><Edit2 size={14} /></button><button onClick={() => handleDelete(t.id)} className="p-1 text-slate-400"><Trash2 size={14} /></button></div></div></div>
                     )}
                   </div>
                 ))}
