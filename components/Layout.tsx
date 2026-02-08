@@ -6,16 +6,17 @@ interface LayoutProps {
   children: React.ReactNode;
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  searchQuery?: string;
+  setSearchQuery?: (query: string) => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, searchQuery = '', setSearchQuery }) => {
   // Sidebar holatini eslab qolish
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     return localStorage.getItem('xpro_sidebar_collapsed') === 'true';
   });
   
   const [imgError, setImgError] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   
   const lightLogo = "https://raw.githubusercontent.com/frlking2007-afk/Rasmlar/refs/heads/main/1769675701416.jpg";
   const darkLogo = "https://raw.githubusercontent.com/frlking2007-afk/Rasmlar/refs/heads/main/1769675605866.jpg";
@@ -50,7 +51,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
     { id: 'sozlama', label: 'Sozlamalar', icon: Settings },
   ];
 
-  const showSearch = activeTab === 'xpro' || activeTab === 'notebook';
+  // Qidiruv faqat XPro sahifasida chiqishi kerak
+  const showSearch = activeTab === 'xpro';
 
   return (
     <div className="min-h-screen flex bg-slate-50 dark:bg-zinc-950 hacker:bg-black transition-all duration-300">
@@ -152,7 +154,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           <div className="w-10"></div>
 
           <div className="flex-1 flex justify-center max-w-2xl px-6">
-            {showSearch && (
+            {showSearch && setSearchQuery && (
               <div className="relative w-full group animate-in fade-in zoom-in-95 duration-300">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 dark:group-focus-within:text-white transition-colors" size={18} />
                 <input 
@@ -177,7 +179,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           </div>
         </header>
 
-        <div className="flex-1 p-6 md:p-10">
+        <div className="flex-1 p-6 md:p-10 relative">
           {children}
         </div>
       </main>

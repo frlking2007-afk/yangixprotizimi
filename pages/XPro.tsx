@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Plus, Trash2, Wallet, CreditCard, 
   Banknote, TrendingDown, Clock, 
@@ -8,7 +8,7 @@ import {
   Calculator, Download, Printer, Save, Loader2,
   TrendingUp, Coins, Settings2, Calendar, List,
   ToggleLeft, ToggleRight, GripHorizontal,
-  LogOut
+  LogOut, Search
 } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 import UIModal from '../components/UIModal.tsx';
@@ -48,7 +48,7 @@ const StatCard = ({ label, val, icon, color, onClick }: { label: string, val: nu
   );
 };
 
-const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) => {
+const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSearchClear?: () => void }> = ({ forcedShiftId, searchQuery = '', onSearchClear }) => {
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [activeShiftsList, setActiveShiftsList] = useState<Shift[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -91,6 +91,71 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
     title: '',
     onConfirm: () => {},
   });
+
+  // SEARCH LOGIC
+  const filteredResults = useMemo(() => {
+    if (!searchQuery || searchQuery.trim() === '') return [];
+    
+    const lowerQuery = searchQuery.toLowerCase();
+    
+    // Search Categories
+    const matchedCategories = expenseCategories.filter(cat => 
+      cat.name.toLowerCase().includes(lowerQuery)
+    ).map(cat => ({ type: 'category', data: cat }));
+
+    // Search Transactions
+    const matchedTransactions = transactions.filter(t => 
+      t.description?.toLowerCase().includes(lowerQuery) || 
+      t.amount.toString().includes(lowerQuery) ||
+      t.category.toLowerCase().includes(lowerQuery) ||
+      (t.sub_category && t.sub_category.toLowerCase().includes(lowerQuery))
+    ).map(t => ({ type: 'transaction', data: t }));
+
+    return [...matchedCategories, ...matchedTransactions];
+  }, [searchQuery, expenseCategories, transactions]);
+
+  const highlightElement = (elementId: string) => {
+    // Wait for DOM update
+    setTimeout(() => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            element.classList.add('ring-4', 'ring-indigo-500', 'ring-offset-2', 'dark:ring-offset-black', 'transition-all', 'duration-500', 'scale-[1.02]');
+            setTimeout(() => {
+                element.classList.remove('ring-4', 'ring-indigo-500', 'ring-offset-2', 'dark:ring-offset-black', 'scale-[1.02]');
+            }, 2000);
+        }
+    }, 300); // Slight delay to ensure tab switch renders content
+  };
+
+  const handleSearchResultClick = (result: any) => {
+    if (result.type === 'category') {
+        // Switch to Expense tab
+        setActiveTab('Xarajat');
+        setActiveSubTab(result.data.name);
+        // Clean search
+        if (onSearchClear) onSearchClear();
+        // Highlight category button
+        highlightElement(`cat-btn-${result.data.id}`);
+    } else if (result.type === 'transaction') {
+        const trans = result.data as Transaction;
+        
+        // Handle Tab Switching
+        if (trans.category === 'Xarajat') {
+            setActiveTab('Xarajat');
+            if (trans.sub_category) setActiveSubTab(trans.sub_category);
+        } else {
+            setActiveTab(trans.category);
+            setActiveSubTab(null);
+        }
+        
+        // Clean search
+        if (onSearchClear) onSearchClear();
+        // Highlight transaction row
+        highlightElement(`trans-item-${trans.id}`);
+    }
+  };
+
 
   const openModal = (config: Omit<typeof modal, 'isOpen'>) => {
     setModal({ ...config, isOpen: true });
@@ -594,9 +659,50 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
   const currentTabTotal = filteredTransactions.reduce((acc, t) => acc + (t.amount || 0), 0);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-20 no-print">
+    <div className="space-y-6 animate-in fade-in duration-500 pb-20 no-print relative">
       <UIModal {...modal} onClose={() => setModal({ ...modal, isOpen: false })} />
       
+      {/* SEARCH RESULTS DROPDOWN */}
+      {filteredResults.length > 0 && (
+          <div className="absolute top-0 left-0 right-0 z-50 mx-auto max-w-2xl bg-white dark:bg-zinc-900 rounded-[2rem] shadow-2xl border border-slate-100 dark:border-zinc-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+             <div className="p-4 bg-slate-50 dark:bg-zinc-950 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center">
+                 <span className="text-xs font-black uppercase text-slate-400 tracking-widest">Qidiruv natijalari ({filteredResults.length})</span>
+                 <button onClick={onSearchClear} className="p-1 hover:bg-slate-200 dark:hover:bg-zinc-800 rounded-full"><X size={16} /></button>
+             </div>
+             <div className="max-h-[60vh] overflow-y-auto p-2 space-y-2">
+                 {filteredResults.map((result, idx) => (
+                     <div 
+                         key={idx} 
+                         onClick={() => handleSearchResultClick(result)}
+                         className="p-4 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-800 cursor-pointer flex items-center justify-between group transition-colors"
+                     >
+                         <div className="flex items-center gap-4">
+                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${result.type === 'category' ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-600'}`}>
+                                 {result.type === 'category' ? <TrendingDown size={18} /> : (result.data.type === 'kirim' ? <ArrowUpRight size={18} className="text-green-600" /> : <ArrowDownRight size={18} className="text-red-600" />)}
+                             </div>
+                             <div>
+                                 <h4 className="font-bold text-slate-800 dark:text-white text-sm">
+                                     {result.type === 'category' ? result.data.name : (result.data.description || 'Tavsifsiz')}
+                                 </h4>
+                                 <p className="text-[10px] text-slate-400 font-bold uppercase">
+                                     {result.type === 'category' ? 'Xarajat toifasi' : `${result.data.category} ${result.data.sub_category ? '• ' + result.data.sub_category : ''}`}
+                                 </p>
+                             </div>
+                         </div>
+                         {result.type === 'transaction' && (
+                             <span className="font-black text-sm text-slate-900 dark:text-white">
+                                 {result.data.amount.toLocaleString()}
+                             </span>
+                         )}
+                         <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                             <ArrowUpRight size={16} className="text-slate-400" />
+                         </div>
+                     </div>
+                 ))}
+             </div>
+          </div>
+      )}
+
       {/* Custom Filter Modal */}
       {filterModalOpen && activeFilterCategory && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
@@ -672,7 +778,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
          <div>
              <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">{activeShift.name}</h2>
              <p className="text-slate-400 font-bold text-xs uppercase mt-1 flex items-center gap-2">
-                <Clock size={12} /> Boshlangan vaqt: {new Date(activeShift.start_date).toLocaleString()}
+                <Clock size={12} /> Boshlangan vaqt: {new Date(activeShift.start_date).toLocaleString('en-GB', { hour12: false })}
              </p>
          </div>
          <div className="flex items-center gap-2">
@@ -847,6 +953,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
               {expenseCategories.map((cat, index) => (
                 <div 
+                  id={`cat-btn-${cat.id}`}
                   key={cat.id} 
                   draggable
                   onDragStart={(e) => handleDragStart(e, index)}
@@ -935,7 +1042,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
                
                <div className="space-y-2.5">
                   {filteredTransactions.map((t) => (
-                    <div key={t.id} className="group bg-white dark:bg-zinc-900 p-4 rounded-[1.5rem] border border-slate-100 dark:border-zinc-800 shadow-sm flex items-center justify-between hover:border-slate-300 dark:hover:border-zinc-600 transition-all">
+                    <div id={`trans-item-${t.id}`} key={t.id} className="group bg-white dark:bg-zinc-900 p-4 rounded-[1.5rem] border border-slate-100 dark:border-zinc-800 shadow-sm flex items-center justify-between hover:border-slate-300 dark:hover:border-zinc-600 transition-all">
                        <div className="flex items-center gap-4">
                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t.type === 'kirim' ? 'bg-green-50 text-green-600 dark:bg-green-900/20' : 'bg-red-50 text-red-600 dark:bg-red-900/20'}`}>
                              {t.type === 'kirim' ? <Plus size={18} /> : <TrendingDown size={18} />}

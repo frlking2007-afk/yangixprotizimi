@@ -18,6 +18,9 @@ const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
+  // Search State (Global)
+  const [globalSearchQuery, setGlobalSearchQuery] = useState('');
+  
   // State to handle opening a specific shift from Reports in XPro
   const [targetShiftId, setTargetShiftId] = useState<string | null>(null);
 
@@ -59,6 +62,9 @@ const App: React.FC = () => {
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
+    // Tab o'zgarganda qidiruvni tozalash
+    setGlobalSearchQuery('');
+    
     // If navigating manually, clear any forced shift ID so XPro loads default
     if (tab !== 'xpro' || (activeTab !== 'xpro')) {
        setTargetShiftId(null);
@@ -73,7 +79,7 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'xpro':
-        return <XPro forcedShiftId={targetShiftId} />;
+        return <XPro forcedShiftId={targetShiftId} searchQuery={globalSearchQuery} onSearchClear={() => setGlobalSearchQuery('')} />;
       case 'xisobotlar':
         return <Reports onContinueShift={handleContinueShift} />;
       case 'bron':
@@ -88,7 +94,12 @@ const App: React.FC = () => {
   };
 
   return (
-    <Layout activeTab={activeTab} setActiveTab={handleTabChange}>
+    <Layout 
+      activeTab={activeTab} 
+      setActiveTab={handleTabChange}
+      searchQuery={globalSearchQuery}
+      setSearchQuery={setGlobalSearchQuery}
+    >
       {renderContent()}
     </Layout>
   );
