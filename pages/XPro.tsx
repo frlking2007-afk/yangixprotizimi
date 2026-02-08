@@ -118,6 +118,28 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
 
   useEffect(() => { initData(); }, [forcedShiftId]);
 
+  const handleSelectActiveShift = async (shift: Shift) => {
+    setLoading(true);
+    try {
+        const [trans, configs] = await Promise.all([getTransactionsByShift(shift.id), getCategoryConfigs(shift.id)]);
+        setTransactions(trans || []);
+        const sums: Record<string, number> = {};
+        const filters: Record<string, any> = {};
+        configs.forEach(cfg => {
+          sums[cfg.category_name] = cfg.savdo_sum || 0;
+          filters[cfg.category_name] = cfg.filters || { xarajat: true, click: false, terminal: false };
+        });
+        setManualSavdoSums(sums);
+        setAllExpenseFilters(filters);
+        setActiveShift(shift);
+    } catch (err) {
+        console.error(err);
+        alert("Smenani yuklashda xatolik");
+    } finally {
+        setLoading(false);
+    }
+  };
+
   const handleKassaSumClick = () => {
     openModal({
       title: "Kassa summasini kiritish",
@@ -438,9 +460,43 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
 
   if (!activeShift) return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
-      <div className="max-w-xl w-full space-y-12">
-        <h2 className="text-5xl font-black text-slate-800 dark:text-white uppercase tracking-tighter leading-none">Xush kelibsiz!</h2>
-        <div className="flex justify-center"><button onClick={() => startNewShift().then(s => setActiveShift(s))} className="px-16 py-6 bg-slate-900 dark:bg-white text-white dark:text-black font-black rounded-[2rem] shadow-2xl transition-all hover:scale-105 active:scale-95 flex items-center gap-4 text-xl"><Plus size={24} /> <span>Hisobotni boshlash</span></button></div>
+      <div className="max-w-xl w-full space-y-12 flex flex-col items-center">
+        <div>
+          <h2 className="text-5xl font-black text-slate-800 dark:text-white uppercase tracking-tighter leading-none mb-4 text-center">Xush kelibsiz!</h2>
+          <div className="flex justify-center"><button onClick={() => startNewShift().then(s => setActiveShift(s))} className="px-16 py-6 bg-slate-900 dark:bg-white text-white dark:text-black font-black rounded-[2rem] shadow-2xl transition-all hover:scale-105 active:scale-95 flex items-center gap-4 text-xl"><Plus size={24} /> <span>Hisobotni boshlash</span></button></div>
+        </div>
+
+        {activeShiftsList.length > 0 && (
+          <div className="mt-8 w-full max-w-md animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150">
+             <div className="flex items-center gap-4 mb-4">
+                 <div className="h-px bg-slate-200 dark:bg-zinc-800 flex-1"></div>
+                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Faol smenalar</span>
+                 <div className="h-px bg-slate-200 dark:bg-zinc-800 flex-1"></div>
+             </div>
+             <div className="space-y-3">
+               {activeShiftsList.map(s => (
+                 <button 
+                   key={s.id}
+                   onClick={() => handleSelectActiveShift(s)}
+                   className="w-full bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-slate-100 dark:border-zinc-800 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-zinc-600 transition-all flex items-center justify-between group"
+                 >
+                    <div className="flex items-center gap-4">
+                       <div className="w-10 h-10 rounded-xl bg-green-50 text-green-600 dark:bg-green-900/20 flex items-center justify-center">
+                          <Clock size={20} />
+                       </div>
+                       <div className="text-left">
+                          <h4 className="font-bold text-slate-800 dark:text-white group-hover:text-indigo-600 transition-colors">{s.name}</h4>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">{new Date(s.start_date).toLocaleDateString()} • {new Date(s.start_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                       </div>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-zinc-800 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                       <PlayCircle size={16} />
+                    </div>
+                 </button>
+               ))}
+             </div>
+          </div>
+        )}
       </div>
     </div>
   );
