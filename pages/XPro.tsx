@@ -7,7 +7,7 @@ import {
   Edit2, X, Check, ArrowUpRight, ArrowDownRight, 
   Calculator, Download, Printer, Save, Loader2,
   TrendingUp, Coins, Settings2, Calendar, List,
-  ToggleLeft, ToggleRight
+  ToggleLeft, ToggleRight, GripHorizontal
 } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 import UIModal from '../components/UIModal.tsx';
@@ -185,6 +185,59 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
         }
       }
     });
+  };
+
+  const handleEditCategory = (e: React.MouseEvent, cat: ExpenseCategory) => {
+    e.stopPropagation();
+    openModal({
+      title: "Toifani tahrirlash",
+      type: 'input',
+      initialValue: cat.name,
+      onConfirm: async (newName) => {
+        if (!newName?.trim() || newName === cat.name) return;
+        await updateExpenseCategory(cat.id, newName.trim());
+        setExpenseCategories(prev => prev.map(c => c.id === cat.id ? {...c, name: newName.trim()} : c));
+        if (activeSubTab === cat.name) setActiveSubTab(newName.trim());
+      }
+    });
+  };
+
+  const handleDeleteCategory = (e: React.MouseEvent, catId: string, catName: string) => {
+    e.stopPropagation();
+    openModal({
+      title: "Toifani o'chirish",
+      description: "Haqiqatan ham ushbu toifani o'chirmoqchimisiz?",
+      type: 'confirm',
+      isDanger: true,
+      onConfirm: async () => {
+        await deleteExpenseCategory(catId);
+        const newCats = expenseCategories.filter(c => c.id !== catId);
+        setExpenseCategories(newCats);
+        if (activeSubTab === catName) setActiveSubTab(newCats[0]?.name || null);
+      }
+    });
+  };
+
+  // DRAG AND DROP HANDLERS
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.setData("text/plain", index.toString());
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    const sourceIndex = parseInt(e.dataTransfer.getData("text/plain"));
+    if (isNaN(sourceIndex) || sourceIndex === targetIndex) return;
+
+    const newCategories = [...expenseCategories];
+    const [movedItem] = newCategories.splice(sourceIndex, 1);
+    newCategories.splice(targetIndex, 0, movedItem);
+
+    setExpenseCategories(newCategories);
+    await updateExpenseCategoriesOrder(newCategories);
   };
 
   const handleSaveTransaction = async (e: React.FormEvent) => {
@@ -588,8 +641,36 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
 
           {activeTab === 'Xarajat' && (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-              {expenseCategories.map(cat => <div key={cat.id} className={`relative h-12 rounded-xl border flex items-center justify-center p-2 cursor-pointer transition-all ${activeSubTab === cat.name ? 'bg-slate-900 text-white dark:bg-white dark:text-black border-slate-900 dark:border-white' : 'bg-white dark:bg-zinc-900 border-slate-100 dark:border-zinc-800 hover:border-slate-300'}`} onClick={() => setActiveSubTab(cat.name)}><span className="font-bold text-[12px]">{cat.name}</span></div>)}
-              <button onClick={handleAddCategory} className="h-12 rounded-xl border-2 border-dashed border-slate-200 dark:border-zinc-700 flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white"><Plus size={20} /></button>
+              {expenseCategories.map((cat, index) => (
+                <div 
+                  key={cat.id} 
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, index)}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, index)}
+                  className={`group relative h-14 rounded-xl border flex items-center justify-center p-2 cursor-pointer transition-all ${activeSubTab === cat.name ? 'bg-slate-900 text-white dark:bg-white dark:text-black border-slate-900 dark:border-white shadow-lg' : 'bg-white dark:bg-zinc-900 border-slate-100 dark:border-zinc-800 hover:border-slate-300'}`} 
+                  onClick={() => setActiveSubTab(cat.name)}
+                >
+                  <span className="font-bold text-[12px]">{cat.name}</span>
+                  
+                  {/* Action Buttons */}
+                  <div className="absolute top-1/2 -translate-y-1/2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                     <button 
+                       onClick={(e) => handleEditCategory(e, cat)}
+                       className="w-6 h-6 rounded-full bg-slate-100 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300 flex items-center justify-center hover:bg-indigo-100 hover:text-indigo-600"
+                     >
+                       <Edit2 size={10} />
+                     </button>
+                     <button 
+                       onClick={(e) => handleDeleteCategory(e, cat.id, cat.name)}
+                       className="w-6 h-6 rounded-full bg-slate-100 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300 flex items-center justify-center hover:bg-red-100 hover:text-red-500"
+                     >
+                       <Trash2 size={10} />
+                     </button>
+                  </div>
+                </div>
+              ))}
+              <button onClick={handleAddCategory} className="h-14 rounded-xl border-2 border-dashed border-slate-200 dark:border-zinc-700 flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white"><Plus size={20} /></button>
             </div>
           )}
 
