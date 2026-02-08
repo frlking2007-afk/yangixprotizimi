@@ -53,7 +53,7 @@ const UIModal: React.FC<UIModalProps> = ({
       >
         <div className="p-8">
           <div className="flex items-center justify-between mb-6">
-            <div className={`p-3 rounded-2xl ${isDanger ? 'bg-red-50 text-red-600' : 'bg-indigo-50 text-indigo-600'}`}>
+            <div className={`p-3 rounded-2xl ${isDanger ? 'bg-red-50 text-red-600' : 'bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white'}`}>
               {isDanger ? <AlertCircle size={24} /> : <Info size={24} />}
             </div>
             <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-full transition-colors">
@@ -79,7 +79,7 @@ const UIModal: React.FC<UIModalProps> = ({
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder={placeholder}
-                className="w-full px-6 py-4 bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800 rounded-2xl outline-none font-bold text-lg focus:ring-2 focus:ring-indigo-500/20 transition-all dark:text-white"
+                className="w-full px-6 py-4 bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800 rounded-2xl outline-none font-bold text-lg focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-white/10 transition-all dark:text-white"
               />
             )}
 
@@ -93,9 +93,11 @@ const UIModal: React.FC<UIModalProps> = ({
               </button>
               <button
                 type="submit"
-                className={`flex-1 px-6 py-4 text-white font-black rounded-2xl text-xs uppercase tracking-widest transition-all shadow-lg ${
-                  isDanger ? 'bg-red-600 hover:bg-red-700 shadow-red-100' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100'
-                } active:scale-95`}
+                className={`flex-1 px-6 py-4 font-black rounded-2xl text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95 ${
+                  isDanger 
+                    ? 'bg-red-600 hover:bg-red-700 text-white shadow-red-100 dark:shadow-none' 
+                    : 'bg-slate-900 hover:bg-black dark:bg-white dark:hover:bg-slate-100 text-white dark:text-black shadow-slate-200 dark:shadow-none'
+                }`}
               >
                 {confirmText}
               </button>

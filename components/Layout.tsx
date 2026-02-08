@@ -69,7 +69,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                 {!imgError ? (
                   <img src={logoSrc} alt="Logo" className="w-10 h-10 rounded-xl object-cover" onError={() => setImgError(true)} />
                 ) : (
-                  <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200"><Wallet size={20} /></div>
+                  <div className="w-10 h-10 bg-slate-900 dark:bg-white flex items-center justify-center text-white dark:text-black rounded-xl shadow-lg"><Wallet size={20} /></div>
                 )}
                 <div className="flex flex-col">
                   <span className="font-black text-xl tracking-tighter dark:text-white hacker:text-[#0f0] uppercase leading-none">Xpro</span>
@@ -81,7 +81,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                  {!imgError ? (
                   <img src={logoSrc} alt="Logo" className="w-9 h-9 rounded-xl object-cover" onError={() => setImgError(true)} />
                 ) : (
-                  <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><Wallet size={18} /></div>
+                  <div className="w-9 h-9 bg-slate-900 dark:bg-white flex items-center justify-center text-white dark:text-black rounded-xl"><Wallet size={18} /></div>
                 )}
                </div>
             )}
@@ -90,7 +90,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
             {!isSidebarCollapsed && (
               <button 
                 onClick={() => setIsSidebarCollapsed(true)}
-                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-xl transition-all"
+                className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-xl transition-all"
               >
                 <ChevronLeft size={20} />
               </button>
@@ -102,7 +102,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
             <div className="flex justify-center py-4 border-b border-slate-50 dark:border-zinc-800">
                <button 
                   onClick={() => setIsSidebarCollapsed(false)}
-                  className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-xl transition-all"
+                  className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-xl transition-all"
                 >
                   <ChevronRight size={20} />
                 </button>
@@ -118,7 +118,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                   w-full flex items-center transition-all duration-300 group rounded-2xl
                   ${isSidebarCollapsed ? 'justify-center p-3' : 'px-5 py-4 gap-4'}
                   ${activeTab === item.id 
-                    ? 'bg-slate-900 text-white shadow-xl shadow-slate-200 dark:bg-indigo-600 dark:shadow-none hacker:bg-[#002200] hacker:text-[#0f0]' 
+                    ? 'bg-slate-900 text-white shadow-xl shadow-slate-200 dark:bg-white dark:text-black dark:shadow-none hacker:bg-[#002200] hacker:text-[#0f0]' 
                     : 'text-slate-400 dark:text-zinc-500 hover:bg-slate-50 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white'}
                 `}
               >
@@ -132,7 +132,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
 
           <div className="p-4 border-t border-slate-50 dark:border-zinc-800 mt-auto">
             <div className={`flex items-center gap-3 p-3 bg-slate-50 dark:bg-zinc-800 rounded-2xl border border-slate-100 dark:border-zinc-700 ${isSidebarCollapsed ? 'justify-center' : ''}`}>
-               <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 shrink-0">
+               <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-zinc-700 flex items-center justify-center text-slate-800 dark:text-white shrink-0">
                   <span className="font-black text-sm">AD</span>
                </div>
                {!isSidebarCollapsed && (
@@ -154,13 +154,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           <div className="flex-1 flex justify-center max-w-2xl px-6">
             {showSearch && (
               <div className="relative w-full group animate-in fade-in zoom-in-95 duration-300">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 dark:group-focus-within:text-white transition-colors" size={18} />
                 <input 
                   type="text"
                   placeholder="Qidiruv (Ctrl + K)"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-12 pr-4 py-2.5 bg-slate-100 dark:bg-zinc-800/50 border-none rounded-full text-sm outline-none ring-2 ring-transparent focus:ring-indigo-500/10 focus:bg-white dark:focus:bg-zinc-800 transition-all font-medium dark:text-white"
+                  className="w-full pl-12 pr-4 py-2.5 bg-slate-100 dark:bg-zinc-800/50 border-none rounded-full text-sm outline-none ring-2 ring-transparent focus:ring-slate-900/5 dark:focus:ring-white/5 focus:bg-white dark:focus:bg-zinc-800 transition-all font-medium dark:text-white"
                 />
               </div>
             )}

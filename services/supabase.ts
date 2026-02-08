@@ -21,10 +21,11 @@ const getUser = async () => {
 // BOOKING FUNCTIONS
 export const getBookingCategories = async (): Promise<BookingCategory[]> => {
   const user = await getUser();
+  if (!user) return [];
   const { data, error } = await supabase
     .from('booking_categories')
     .select('*')
-    .eq('user_id', user?.id || '')
+    .eq('user_id', user.id)
     .order('created_at', { ascending: true });
   if (error) return [];
   return data;
@@ -32,9 +33,10 @@ export const getBookingCategories = async (): Promise<BookingCategory[]> => {
 
 export const createBookingCategory = async (name: string): Promise<BookingCategory | null> => {
   const user = await getUser();
+  if (!user) return null;
   const { data, error } = await supabase
     .from('booking_categories')
-    .insert([{ name, user_id: user?.id }])
+    .insert([{ name, user_id: user.id }])
     .select()
     .single();
   if (error) return null;
@@ -77,9 +79,15 @@ export const getRooms = async (categoryId?: string): Promise<Room[]> => {
 
 export const createRoom = async (categoryId: string, name: string): Promise<Room | null> => {
   const user = await getUser();
+  if (!user) return null;
   const { data, error } = await supabase
     .from('rooms')
-    .insert([{ category_id: categoryId, name, status: 'free', user_id: user?.id }])
+    .insert([{ 
+      category_id: categoryId, 
+      name: name.trim(), 
+      status: 'free', 
+      user_id: user.id 
+    }])
     .select()
     .single();
   if (error) {
