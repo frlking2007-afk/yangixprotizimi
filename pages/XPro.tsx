@@ -412,19 +412,23 @@ const XPro: React.FC<XProProps> = ({ forcedShiftId }) => {
 
   if (!activeShift) return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4 animate-in fade-in duration-700">
-      <div className="max-w-xl w-full space-y-12">
+      <div className="max-w-xl w-full flex flex-col items-center space-y-12">
         <div className="space-y-6">
-          <div className="w-24 h-24 bg-indigo-50 dark:bg-zinc-800 rounded-3xl mx-auto flex items-center justify-center text-indigo-600 shadow-xl shadow-indigo-100 dark:shadow-none animate-bounce">
-            <PlayCircle size={48} />
-          </div>
           <h2 className="text-5xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Xush kelibsiz!</h2>
           <p className="text-slate-400 font-medium text-lg">Kassa operatsiyalarini boshlash uchun yangi smena oching yoki faol hisobotlarni davom ettiring.</p>
         </div>
-        <button onClick={handleStartShift} className="group relative w-full md:w-auto px-16 py-6 bg-slate-900 dark:bg-indigo-600 text-white font-black rounded-[2rem] shadow-2xl transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-3 text-xl">
-          <Plus size={24} /> <span>Hisobotni boshlash</span>
-        </button>
+        
+        <div className="flex justify-center w-full">
+          <button 
+            onClick={handleStartShift} 
+            className="w-full md:w-auto px-16 py-6 bg-slate-900 dark:bg-indigo-600 text-white font-black rounded-[2rem] shadow-2xl transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-4 text-xl"
+          >
+            <Plus size={24} strokeWidth={3} /> <span>Hisobotni boshlash</span>
+          </button>
+        </div>
+
         {activeShiftsList.length > 0 && (
-          <div className="space-y-6 pt-12 border-t border-slate-100 dark:border-zinc-800">
+          <div className="w-full space-y-6 pt-12 border-t border-slate-100 dark:border-zinc-800">
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em]">Faol xisobotlar</h3>
             <div className="grid grid-cols-1 gap-3">
               {activeShiftsList.map((s) => (

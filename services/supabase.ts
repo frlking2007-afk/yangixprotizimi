@@ -18,8 +18,6 @@ const getUser = async () => {
   return user;
 };
 
-// ... (existing functions kept unchanged)
-
 // BOOKING FUNCTIONS
 export const getBookingCategories = async (): Promise<BookingCategory[]> => {
   const user = await getUser();
@@ -43,6 +41,14 @@ export const createBookingCategory = async (name: string): Promise<BookingCatego
   return data;
 };
 
+export const updateBookingCategory = async (id: string, name: string): Promise<void> => {
+  const { error } = await supabase
+    .from('booking_categories')
+    .update({ name })
+    .eq('id', id);
+  if (error) throw error;
+};
+
 export const deleteBookingCategory = async (id: string) => {
   await supabase.from('booking_categories').delete().eq('id', id);
 };
@@ -51,9 +57,8 @@ export const getRooms = async (categoryId?: string): Promise<Room[]> => {
   const user = await getUser();
   let query = supabase.from('rooms').select('*').eq('user_id', user?.id || '');
   if (categoryId) query = query.eq('category_id', categoryId);
-  const { data, error } = await query.order('name', { ascending: true });
-  if (error) return [];
-  return data;
+  const { data, error } = query.order('name', { ascending: true });
+  return (await data) || [];
 };
 
 export const createRoom = async (categoryId: string, name: string): Promise<Room | null> => {
@@ -74,9 +79,6 @@ export const updateRoomStatus = async (roomId: string, status: 'free' | 'busy') 
 export const deleteRoom = async (roomId: string) => {
   await supabase.from('rooms').delete().eq('id', roomId);
 };
-
-// ... (The rest of the file contents like getNotes, getActiveShift, etc. are preserved)
-// I will include the core existing logic but ensuring Booking is integrated.
 
 export const getActiveShift = async (): Promise<Shift | null> => {
   try {
