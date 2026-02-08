@@ -186,19 +186,6 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
     });
   };
 
-  const handleDownloadImage = async (catName: string) => {
-    const el = exportRefs.current[catName];
-    if (!el) return;
-    setExportingId(catName);
-    try {
-      const dataUrl = await htmlToImage.toPng(el, { cacheBust: true, backgroundColor: '#fff', pixelRatio: 3 });
-      const link = document.createElement('a');
-      link.download = `xisobot-${catName.toLowerCase()}-${activeShift?.name}.png`;
-      link.href = dataUrl;
-      link.click();
-    } catch (err) { alert('Rasm yuklashda xatolik.'); } finally { setExportingId(null); }
-  };
-
   const calculateCatStats = (catName: string) => {
     const filters = allExpenseFilters[catName] || { xarajat: true, click: false, terminal: false };
     const savdo = manualSavdoSums[catName] || 0;
@@ -210,6 +197,83 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
     if (filters.click) totalDeduction += clickSum;
     if (filters.terminal) totalDeduction += terminalSum;
     return { savdo, catExpenses, clickSum, terminalSum, totalDeduction, balance: savdo - totalDeduction, filters, transactions: transactions.filter(t => t.category === 'Xarajat' && t.sub_category === catName) };
+  };
+
+  const handlePrint = (catName: string) => {
+    const stats = calculateCatStats(catName);
+    const now = new Date();
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>XPRO - ${catName}</title>
+          <style>
+            @page { margin: 0; size: 80mm auto; }
+            body { 
+              font-family: 'Courier New', monospace; 
+              width: 72mm; 
+              margin: 0 auto; 
+              padding: 10px 5px; 
+              font-size: 10pt; 
+              color: black; 
+              background: white; 
+            }
+            .center { text-align: center; }
+            .bold { font-weight: bold; }
+            .header { font-size: 16pt; margin-bottom: 5px; font-weight: 900; }
+            .divider { border-top: 1px dashed black; margin: 10px 0; }
+            .row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+            .list-title { margin-top: 15px; margin-bottom: 5px; font-weight: bold; text-decoration: underline; }
+            .item { font-size: 9pt; display: flex; justify-content: space-between; margin-bottom: 2px; }
+            .total-box { border: 2px solid black; padding: 5px; margin-top: 10px; font-weight: bold; font-size: 12pt; }
+          </style>
+        </head>
+        <body>
+          <div class="center header">X PRO</div>
+          <div class="center bold" style="font-size: 12pt; margin-bottom: 5px;">${catName}</div>
+          <div class="center" style="font-size: 8pt; margin-bottom: 10px;">${now.toLocaleDateString()} ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+          
+          <div class="divider"></div>
+          
+          <div class="row"><span>Savdo:</span><span class="bold">${stats.savdo.toLocaleString()}</span></div>
+          <div class="row"><span>Xarajat (Jami):</span><span class="bold">${stats.totalDeduction.toLocaleString()}</span></div>
+          
+          <div class="row total-box">
+            <span>QOLGAN PUL:</span>
+            <span>${stats.balance.toLocaleString()}</span>
+          </div>
+          
+          <div class="list-title">Xarajatlar ro'yxati:</div>
+          ${stats.transactions.length > 0 ? stats.transactions.map(t => `
+            <div class="item">
+              <span>${t.description || 'Xarajat'}</span>
+              <span>${t.amount.toLocaleString()}</span>
+            </div>
+          `).join('') : '<div class="center" style="font-style:italic">Xarajatlar yo\'q</div>'}
+          
+          <div class="divider"></div>
+          <div class="center" style="font-size: 8pt;">XPRO Tizimi</div>
+          <script>window.onload = function() { window.print(); window.close(); }</script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const handleDownloadImage = async (catName: string) => {
+    const el = exportRefs.current[catName];
+    if (!el) return;
+    setExportingId(catName);
+    try {
+      // Element already rendered in DOM but hidden offscreen
+      const dataUrl = await htmlToImage.toPng(el, { cacheBust: true, backgroundColor: '#fff', pixelRatio: 3 });
+      const link = document.createElement('a');
+      link.download = `xpro-${catName.toLowerCase()}-${activeShift?.name}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) { alert('Rasm yuklashda xatolik.'); } finally { setExportingId(null); }
   };
 
   const formatAmount = (val: string) => val.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
@@ -235,6 +299,8 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
      return t.category === activeTab;
   });
 
+  const currentTabTotal = filteredTransactions.reduce((acc, t) => acc + (t.amount || 0), 0);
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20 no-print">
       <UIModal {...modal} onClose={() => setModal({ ...modal, isOpen: false })} />
@@ -249,31 +315,102 @@ const XPro: React.FC<{ forcedShiftId?: string | null }> = ({ forcedShiftId }) =>
           {expenseCategories.map(cat => {
             const stats = calculateCatStats(cat.name);
             return (
-              <div key={cat.id} className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-slate-100 dark:border-zinc-800 overflow-hidden flex flex-col group shadow-sm">
-                <div ref={el => exportRefs.current[cat.name] = el} className="p-10 bg-white text-slate-900 w-[500px] mx-auto flex flex-col">
-                   <div className="text-center mb-6 font-black text-3xl uppercase">XPRO KASSA</div>
-                   <div className="space-y-4 mb-6 font-bold"><div className="flex justify-between border-b pb-2"><span className="text-[10px] uppercase text-slate-400">Nomi</span><span>{cat.name}</span></div><div className="flex justify-between border-b pb-2"><span className="text-[10px] uppercase text-slate-400">Savdo</span><span>{stats.savdo.toLocaleString()}</span></div><div className="flex justify-between border-b pb-2"><span className="text-[10px] uppercase text-slate-400">Xarajat</span><span>{stats.catExpenses.toLocaleString()}</span></div><div className="pt-4 border-t-2 border-dashed mt-4"><div className="flex justify-between p-6 bg-slate-100 border border-black rounded-[2rem] shadow-sm"><span className="text-[10px] uppercase text-slate-500">Qolgan Pul</span><span className="text-2xl font-black">{stats.balance.toLocaleString()} so'm</span></div></div></div>
+              <div key={cat.id} className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-slate-100 dark:border-zinc-800 overflow-hidden flex flex-col group shadow-sm transition-all hover:shadow-md">
+                {/* Visual Summary Card (On Screen) */}
+                <div className="p-8 flex flex-col gap-6">
+                    <div className="text-center">
+                        <h3 className="font-black text-2xl text-slate-900 dark:text-white uppercase tracking-tighter">XPRO KASSA</h3>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{cat.name}</p>
+                    </div>
+                    
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center border-b border-dashed border-slate-200 dark:border-zinc-700 pb-3">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Savdo</span>
+                            <span className="font-black text-lg text-slate-900 dark:text-white">{stats.savdo.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center border-b border-dashed border-slate-200 dark:border-zinc-700 pb-3">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Xarajat</span>
+                            <span className="font-black text-lg text-slate-900 dark:text-white">{stats.totalDeduction.toLocaleString()}</span>
+                        </div>
+                        <div className="bg-slate-50 dark:bg-zinc-800 p-4 rounded-2xl flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest">Qolgan Pul</span>
+                            <span className="font-black text-xl text-slate-900 dark:text-white">{stats.balance.toLocaleString()} <span className="text-[10px]">so'm</span></span>
+                        </div>
+                    </div>
                 </div>
-                <div className="bg-slate-50 dark:bg-zinc-800 p-6 flex gap-3 border-t border-slate-100 dark:border-zinc-800"><button onClick={() => window.print()} className="flex-1 py-4 bg-white dark:bg-zinc-900 border dark:border-zinc-700 rounded-2xl text-xs font-black">Chop etish</button><button onClick={() => handleDownloadImage(cat.name)} disabled={exportingId !== null} className="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-black rounded-2xl text-xs font-black flex items-center justify-center gap-2">{exportingId === cat.name ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} Rasm</button></div>
+
+                {/* Hidden Detailed Card for Image Generation (Off-screen, includes list) */}
+                <div className="fixed -left-[9999px] top-0">
+                  <div ref={el => exportRefs.current[cat.name] = el} className="p-10 bg-white text-slate-900 w-[500px] flex flex-col border border-slate-200">
+                     <div className="text-center mb-6 font-black text-3xl uppercase">XPRO KASSA</div>
+                     <div className="space-y-4 mb-6 font-bold">
+                        <div className="flex justify-between border-b pb-2"><span className="text-[10px] uppercase text-slate-400">Nomi</span><span>{cat.name}</span></div>
+                        <div className="flex justify-between border-b pb-2"><span className="text-[10px] uppercase text-slate-400">Sana</span><span>{new Date().toLocaleDateString()}</span></div>
+                        <div className="flex justify-between border-b pb-2"><span className="text-[10px] uppercase text-slate-400">Savdo</span><span>{stats.savdo.toLocaleString()}</span></div>
+                        <div className="flex justify-between border-b pb-2"><span className="text-[10px] uppercase text-slate-400">Xarajat</span><span>{stats.totalDeduction.toLocaleString()}</span></div>
+                        
+                        <div className="pt-4 border-t-2 border-dashed mt-4">
+                           <div className="flex justify-between p-6 bg-slate-100 border border-black rounded-[2rem] shadow-sm">
+                              <span className="text-[10px] uppercase text-slate-500">Qolgan Pul</span>
+                              <span className="text-2xl font-black">{stats.balance.toLocaleString()} so'm</span>
+                           </div>
+                        </div>
+
+                        <div className="mt-6">
+                          <div className="text-[10px] uppercase text-slate-400 mb-2">Xarajatlar ro'yxati:</div>
+                          {stats.transactions.map(t => (
+                            <div key={t.id} className="flex justify-between text-xs py-1 border-b border-dashed border-slate-200">
+                              <span>{t.description || 'Xarajat'}</span>
+                              <span>{t.amount.toLocaleString()}</span>
+                            </div>
+                          ))}
+                        </div>
+                     </div>
+                  </div>
+                </div>
+                
+                <div className="bg-slate-50 dark:bg-zinc-800/50 p-6 flex gap-3 border-t border-slate-100 dark:border-zinc-800 mt-auto">
+                    <button onClick={() => handlePrint(cat.name)} className="flex-1 py-4 bg-white dark:bg-zinc-900 border dark:border-zinc-700 rounded-2xl text-slate-900 dark:text-white text-xs font-black uppercase hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all flex items-center justify-center gap-2">
+                      <Printer size={16} /> Chop etish
+                    </button>
+                    <button 
+                      onClick={() => handleDownloadImage(cat.name)} 
+                      disabled={exportingId !== null} 
+                      className="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-black rounded-2xl text-xs font-black uppercase hover:bg-black dark:hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
+                    >
+                      {exportingId === cat.name ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} Rasm
+                    </button>
+                </div>
               </div>
             );
           })}
         </div>
       ) : (
         <div className="space-y-6">
-          {activeTab === 'Kassa' && (
+          {activeTab === 'Kassa' ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <StatCard label="Kassa Summasi" val={manualKassaSum} icon={<ArrowUpRight />} color="green" onClick={handleKassaSumClick} />
               <StatCard label="Umumiy Chiqim" val={totalExpenses} icon={<ArrowDownRight />} color="red" />
               <StatCard label="Balans" val={manualKassaSum - totalExpenses} icon={<Calculator />} color="indigo" />
             </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+               <StatCard 
+                 label={`${activeTab} bo'yicha jami summa`} 
+                 val={currentTabTotal} 
+                 icon={activeTab === 'Xarajat' ? <TrendingDown /> : <ArrowUpRight />} 
+                 color={activeTab === 'Xarajat' ? 'red' : 'green'} 
+               />
+            </div>
           )}
+
           {activeTab === 'Xarajat' && (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
               {expenseCategories.map(cat => <div key={cat.id} className={`relative h-12 rounded-xl border flex items-center justify-center p-2 cursor-pointer transition-all ${activeSubTab === cat.name ? 'bg-slate-900 text-white dark:bg-white dark:text-black border-slate-900 dark:border-white' : 'bg-white dark:bg-zinc-900 border-slate-100 dark:border-zinc-800 hover:border-slate-300'}`} onClick={() => setActiveSubTab(cat.name)}><span className="font-bold text-[12px]">{cat.name}</span></div>)}
               <button onClick={handleAddCategory} className="h-12 rounded-xl border-2 border-dashed border-slate-200 dark:border-zinc-700 flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white"><Plus size={20} /></button>
             </div>
           )}
+          
           {activeTab !== 'Kassa' && (
             <form onSubmit={handleSaveTransaction} className="bg-white dark:bg-zinc-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-zinc-800 shadow-sm space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><input type="text" value={amountInput} onChange={(e) => setAmountInput(formatAmount(e.target.value))} placeholder="Summa (0)" className="w-full px-5 py-4 bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800 rounded-2xl outline-none font-black text-lg dark:text-white focus:ring-2 focus:ring-slate-900/5 transition-all" /><input type="text" value={descInput} onChange={(e) => setDescInput(e.target.value)} placeholder="Tavsif (ixtiyoriy)" className="w-full px-5 py-4 bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800 rounded-2xl outline-none font-medium dark:text-white focus:ring-2 focus:ring-slate-900/5 transition-all" /></div>
