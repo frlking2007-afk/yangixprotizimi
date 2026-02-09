@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Lock, Mail, Loader2, AlertCircle, Wallet } from 'lucide-react';
 import { login } from '../services/auth';
@@ -32,6 +33,12 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!email || !password) {
+        setError("Iltimos, barcha maydonlarni to'ldiring!");
+        return;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -103,13 +110,15 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               </div>
             </div>
 
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="w-full py-4 bg-indigo-600 hacker:bg-[#0f0] text-white hacker:text-black font-black rounded-2xl hover:bg-indigo-700 hacker:hover:bg-[#00cc00] transition-all shadow-lg shadow-indigo-100 dark:shadow-none flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
-            >
-              {loading ? <Loader2 className="animate-spin" size={20} /> : 'Tizimga kirish'}
-            </button>
+            <div className="space-y-3">
+                <button 
+                  type="submit" 
+                  disabled={loading}
+                  className="w-full py-4 bg-indigo-600 hacker:bg-[#0f0] text-white hacker:text-black font-black rounded-2xl hover:bg-indigo-700 hacker:hover:bg-[#00cc00] transition-all shadow-lg shadow-indigo-100 dark:shadow-none flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+                >
+                  {loading ? <Loader2 className="animate-spin" size={20} /> : 'Tizimga kirish'}
+                </button>
+            </div>
           </form>
         </div>
       </div>

@@ -106,7 +106,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
     // Search Categories
     const matchedCategories = expenseCategories.filter(cat => 
       cat.name.toLowerCase().includes(lowerQuery)
-    ).map(cat => ({ type: 'category', data: cat }));
+    ).map(cat => ({ type: 'category' as const, data: cat }));
 
     // Search Transactions
     const matchedTransactions = transactions.filter(t => 
@@ -114,7 +114,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
       t.amount.toString().includes(lowerQuery) ||
       t.category.toLowerCase().includes(lowerQuery) ||
       (t.sub_category && t.sub_category.toLowerCase().includes(lowerQuery))
-    ).map(t => ({ type: 'transaction', data: t }));
+    ).map(t => ({ type: 'transaction' as const, data: t }));
 
     return [...matchedCategories, ...matchedTransactions];
   }, [searchQuery, expenseCategories, transactions]);
@@ -912,7 +912,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
                 {/* HIDDEN RECEIPT LAYOUT FOR IMAGE GENERATION - MATCHING THE SCREENSHOT EXACTLY */}
                 {/* Increased Width and Font Sizes for "Katta" look */}
                 <div className="fixed -left-[9999px] top-0">
-                  <div ref={el => exportRefs.current[cat.name] = el} className="w-[550px] bg-white p-12 font-sans text-black flex flex-col items-stretch border-2 border-gray-100">
+                  <div ref={(el) => { exportRefs.current[cat.name] = el; }} className="w-[550px] bg-white p-12 font-sans text-black flex flex-col items-stretch border-2 border-gray-100">
                      {/* Header */}
                      <h1 className="text-center font-black text-5xl uppercase mb-4 tracking-tight">XPRO</h1>
                      
