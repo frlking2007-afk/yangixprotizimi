@@ -609,8 +609,22 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
           
           <div class="row">
             <span class="label">XARAJAT</span>
-            <span class="value">${stats.totalDeduction.toLocaleString()}</span>
+            <span class="value">${stats.catExpenses.toLocaleString()}</span>
           </div>
+          
+          ${stats.filters.click ? `
+            <div class="row">
+              <span class="label">CLICK</span>
+              <span class="value">${stats.clickSum.toLocaleString()}</span>
+            </div>
+          ` : ''}
+
+          ${stats.filters.terminal ? `
+            <div class="row">
+              <span class="label">TERMINAL</span>
+              <span class="value">${stats.terminalSum.toLocaleString()}</span>
+            </div>
+          ` : ''}
           
           <div class="divider-dashed"></div>
           
@@ -900,8 +914,20 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
                         </div>
                         <div className="flex justify-between items-center border-b border-dashed border-slate-200 dark:border-zinc-700 pb-3">
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Xarajat</span>
-                            <span className="font-black text-lg text-slate-900 dark:text-white">{stats.totalDeduction.toLocaleString()}</span>
+                            <span className="font-black text-lg text-slate-900 dark:text-white">{stats.catExpenses.toLocaleString()}</span>
                         </div>
+                        {stats.filters.click && (
+                            <div className="flex justify-between items-center border-b border-dashed border-slate-200 dark:border-zinc-700 pb-3">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Click</span>
+                                <span className="font-black text-lg text-slate-900 dark:text-white">{stats.clickSum.toLocaleString()}</span>
+                            </div>
+                        )}
+                        {stats.filters.terminal && (
+                            <div className="flex justify-between items-center border-b border-dashed border-slate-200 dark:border-zinc-700 pb-3">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Terminal</span>
+                                <span className="font-black text-lg text-slate-900 dark:text-white">{stats.terminalSum.toLocaleString()}</span>
+                            </div>
+                        )}
                         <div className="bg-slate-50 dark:bg-zinc-800 p-4 rounded-2xl flex justify-between items-center">
                             <span className="text-[10px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest">Qolgan Pul</span>
                             <span className="font-black text-xl text-slate-900 dark:text-white">{stats.balance.toLocaleString()} <span className="text-[10px]">so'm</span></span>
@@ -941,8 +967,22 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
                         
                         <div className="flex justify-between items-end">
                            <span className="text-lg font-black uppercase tracking-widest">XARAJAT</span>
-                           <span className="text-3xl font-black">{stats.totalDeduction.toLocaleString()}</span>
+                           <span className="text-3xl font-black">{stats.catExpenses.toLocaleString()}</span>
                         </div>
+
+                        {stats.filters.click && (
+                            <div className="flex justify-between items-end">
+                                <span className="text-lg font-black uppercase tracking-widest">CLICK</span>
+                                <span className="text-3xl font-black">{stats.clickSum.toLocaleString()}</span>
+                            </div>
+                        )}
+
+                        {stats.filters.terminal && (
+                            <div className="flex justify-between items-end">
+                                <span className="text-lg font-black uppercase tracking-widest">TERMINAL</span>
+                                <span className="text-3xl font-black">{stats.terminalSum.toLocaleString()}</span>
+                            </div>
+                        )}
                      </div>
                      
                      {/* Dashed Divider */}

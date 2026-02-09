@@ -382,7 +382,18 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
                            <span className="text-[12px] font-black text-black uppercase tracking-[0.2em] flex-shrink-0">Xarajat</span>
                            <span className="font-black text-lg text-black">{stats.catExpenses.toLocaleString()}</span>
                         </div>
-                        
+                        {stats.filters.click && (
+                            <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                               <span className="text-[12px] font-black text-black uppercase tracking-[0.2em] flex-shrink-0">Click</span>
+                               <span className="font-black text-lg text-black">{stats.clickSum.toLocaleString()}</span>
+                            </div>
+                        )}
+                        {stats.filters.terminal && (
+                            <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                               <span className="text-[12px] font-black text-black uppercase tracking-[0.2em] flex-shrink-0">Terminal</span>
+                               <span className="font-black text-lg text-black">{stats.terminalSum.toLocaleString()}</span>
+                            </div>
+                        )}
                         <div className="pt-6 border-t-2 border-dashed border-black mt-6">
                            <div className="flex justify-between items-center p-5 bg-slate-100 border border-black rounded-3xl">
                               <span className="text-xs font-black text-black uppercase tracking-widest">Qolgan Pul</span>
