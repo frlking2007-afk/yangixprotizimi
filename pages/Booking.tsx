@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, LayoutGrid, Trash2, 
   RefreshCcw, Edit2, X, Calendar, Clock,
-  User, Phone, FileText, Check, AlertCircle
+  User, Phone, FileText, Check, AlertCircle, ChevronDown
 } from 'lucide-react';
 import UIModal from '../components/UIModal.tsx';
 import { 
@@ -12,6 +12,107 @@ import {
   getBookingsForDate, createBooking, deleteBooking
 } from '../services/supabase.ts';
 import { BookingCategory, Room, Booking as BookingType } from '../types.ts';
+
+// Helper for 24h format display
+const formatDateTime24h = (isoString: string) => {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${day}.${month}.${year} ${hours}:${minutes}`;
+};
+
+// Custom 24h Picker Component
+const DateTimePicker24h = ({ value, onChange, className }: { value: string, onChange: (val: string) => void, className?: string }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  const handleDateChange = (dateVal: string) => {
+    const timePart = value.split('T')[1] || '00:00';
+    onChange(`${dateVal}T${timePart}`);
+  };
+
+  const handleTimeChange = (type: 'hour' | 'minute', val: string) => {
+    const [datePart, timePart] = value.split('T');
+    const [h, m] = (timePart || '00:00').split(':');
+    const newTime = type === 'hour' ? `${val}:${m}` : `${h}:${val}`;
+    onChange(`${datePart}T${newTime}`);
+  };
+
+  const [datePart, timePart] = value.split('T');
+  const [currentHour, currentMinute] = (timePart || '00:00').split(':');
+
+  const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+  const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
+
+  return (
+    <div className={`relative ${className}`}>
+      <button 
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between gap-3 pl-4 pr-4 py-3 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-2xl text-xs font-bold uppercase tracking-wide hover:bg-slate-100 dark:hover:bg-zinc-700 transition-all dark:text-white"
+      >
+        <span>{formatDateTime24h(value)}</span>
+        <Calendar size={16} className="text-slate-400" />
+      </button>
+
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)}></div>
+          <div className="absolute top-full left-0 mt-2 p-4 bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 rounded-2xl shadow-xl z-20 flex flex-col gap-4 min-w-[280px]">
+            
+            {/* Date Selection */}
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Sana</label>
+              <input 
+                type="date" 
+                value={datePart}
+                onChange={(e) => handleDateChange(e.target.value)}
+                className="w-full p-2 bg-slate-50 dark:bg-zinc-800 rounded-xl border border-slate-200 dark:border-zinc-700 text-sm font-bold dark:text-white outline-none"
+              />
+            </div>
+
+            {/* Time Selection */}
+            <div>
+               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Vaqt (24 soat)</label>
+               <div className="flex gap-2 h-32">
+                 <div className="flex-1 flex flex-col">
+                    <span className="text-[9px] text-center text-slate-400 font-bold mb-1">SOAT</span>
+                    <select 
+                        value={currentHour}
+                        onChange={(e) => handleTimeChange('hour', e.target.value)}
+                        className="flex-1 p-1 bg-slate-50 dark:bg-zinc-800 rounded-xl border border-slate-200 dark:border-zinc-700 text-lg font-black text-center dark:text-white outline-none"
+                        size={4}
+                    >
+                        {hours.map(h => <option key={h} value={h} className="py-1">{h}</option>)}
+                    </select>
+                 </div>
+                 <span className="py-8 font-black text-slate-300">:</span>
+                 <div className="flex-1 flex flex-col">
+                    <span className="text-[9px] text-center text-slate-400 font-bold mb-1">DAQIQA</span>
+                    <select 
+                        value={currentMinute}
+                        onChange={(e) => handleTimeChange('minute', e.target.value)}
+                        className="flex-1 p-1 bg-slate-50 dark:bg-zinc-800 rounded-xl border border-slate-200 dark:border-zinc-700 text-lg font-black text-center dark:text-white outline-none"
+                        size={4}
+                    >
+                        {minutes.map(m => <option key={m} value={m} className="py-1">{m}</option>)}
+                    </select>
+                 </div>
+               </div>
+            </div>
+            
+            <div className="text-center pt-2 border-t border-slate-100 dark:border-zinc-800">
+               <button type="button" onClick={() => setIsOpen(false)} className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase">Yopish</button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
 
 const Booking: React.FC = () => {
   const [categories, setCategories] = useState<BookingCategory[]>([]);
@@ -183,16 +284,10 @@ const Booking: React.FC = () => {
   const getRoomBookingForSelectedTime = (roomId: string) => {
     const selectedTime = new Date(selectedDateTime).getTime();
     
-    // Find a booking that matches exactly or overlaps?
-    // For simplicity, let's find if there is a booking that starts at the selected time 
-    // OR if we want to show all bookings for that day, we check if one exists close to it.
-    // The prompt says "sanani tanlasam o'sha sanadagi ma'lumotlar chiqishi kerak".
-    // Let's implement strict "Is there a booking at this time (+/- 30 mins)?" or just show the booking for that day?
-    // Let's go with: Is there a booking that starts within 1 hour of selected time?
-    
+    // Within 1 hour window check
     return bookings.find(b => {
       const bTime = new Date(b.booking_time).getTime();
-      return b.room_id === roomId && Math.abs(bTime - selectedTime) < 60 * 60 * 1000; // Within 1 hour window
+      return b.room_id === roomId && Math.abs(bTime - selectedTime) < 60 * 60 * 1000; 
     });
   };
 
@@ -202,7 +297,6 @@ const Booking: React.FC = () => {
     setSelectedRoom(room);
     if (booking) {
       // Room is busy, show details (fill form with existing data)
-      // Convert UTC booking time to local datetime-local string
       const bDate = new Date(booking.booking_time);
       const offset = bDate.getTimezoneOffset() * 60000;
       const localBookingTime = (new Date(bDate.getTime() - offset)).toISOString().slice(0, 16);
@@ -229,13 +323,9 @@ const Booking: React.FC = () => {
     e.preventDefault();
     if (!selectedRoom) return;
 
-    // Check if updating or creating
     const existingBooking = getRoomBookingForSelectedTime(selectedRoom.id);
     
     if (existingBooking) {
-      // Ideally update logic here, but for now we can just close or delete & re-create
-      // Let's assume edit is not requested explicitly, just close.
-      // Or if user wants to delete:
       setIsBookingModalOpen(false);
       return;
     }
@@ -297,17 +387,13 @@ const Booking: React.FC = () => {
                  </div>
 
                  <div>
-                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Vaqt</label>
-                   <div className="relative">
-                     <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                     <input 
-                       type="datetime-local"
-                       required
-                       value={bookingForm.bookingTime}
-                       onChange={(e) => setBookingForm({...bookingForm, bookingTime: e.target.value})}
-                       className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800 rounded-2xl outline-none font-medium dark:text-white"
-                     />
-                   </div>
+                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Vaqt (24 soat)</label>
+                   {/* Custom 24h Picker for Modal */}
+                   <DateTimePicker24h 
+                     value={bookingForm.bookingTime}
+                     onChange={(val) => setBookingForm({...bookingForm, bookingTime: val})}
+                     className="w-full"
+                   />
                  </div>
 
                  <div>
@@ -394,15 +480,12 @@ const Booking: React.FC = () => {
 
         {/* Date Picker & Actions */}
         <div className="flex flex-wrap items-center gap-3 shrink-0">
-           <div className="relative group">
-              <input 
-                type="datetime-local" 
-                value={selectedDateTime}
-                onChange={(e) => setSelectedDateTime(e.target.value)}
-                className="pl-4 pr-10 py-3 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-2xl text-xs font-bold uppercase tracking-wide outline-none focus:ring-2 focus:ring-slate-900/10 dark:text-white"
-              />
-              <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-           </div>
+           {/* Custom Header 24h Picker */}
+           <DateTimePicker24h 
+              value={selectedDateTime} 
+              onChange={setSelectedDateTime} 
+              className="w-56"
+           />
            
            <div className="h-8 w-px bg-slate-200 dark:bg-zinc-700 mx-2 hidden md:block"></div>
 

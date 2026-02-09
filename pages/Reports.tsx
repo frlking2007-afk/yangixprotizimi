@@ -124,8 +124,9 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
       .filter(t => t.category === 'Xarajat' && t.sub_category === catName)
       .reduce((acc, t) => acc + (t.amount || 0), 0);
       
+    // Include both "Click" and "Kartaga O'tkazma"
     const clickSum = transactions
-      .filter(t => t.category === 'Click')
+      .filter(t => t.category === 'Click' || t.category === "Kartaga O'tkazma")
       .reduce((acc, t) => acc + (t.amount || 0), 0);
       
     const terminalSum = transactions
@@ -196,7 +197,7 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
           
           <div class="row"><span class="label">Savdo:</span><span class="black" style="font-size: 12pt;">${stats.savdo.toLocaleString()}</span></div>
           <div class="row"><span class="label">Xarajat:</span><span class="black" style="font-size: 12pt;">${stats.catExpenses.toLocaleString()}</span></div>
-          ${stats.filters.click ? `<div class="row"><span class="label">Click:</span><span class="black" style="font-size: 12pt;">${stats.clickSum.toLocaleString()}</span></div>` : ''}
+          ${stats.filters.click ? `<div class="row"><span class="label">KARTAGA O'TKAZMA:</span><span class="black" style="font-size: 12pt;">${stats.clickSum.toLocaleString()}</span></div>` : ''}
           ${stats.filters.terminal ? `<div class="row"><span class="label">Terminal:</span><span class="black" style="font-size: 12pt;">${stats.terminalSum.toLocaleString()}</span></div>` : ''}
           
           <div class="divider"></div>
@@ -275,8 +276,9 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
   // --- DETAILED VIEW ---
   if (selectedShiftId && selectedShift) {
     // Base expenses (Click, Uzcard, Humo, Xarajat transactions)
+    // Updated to include Kartaga O'tkazma
     const baseExpenses = transactions
-      .filter(t => ['Click', 'Uzcard', 'Humo', 'Xarajat'].includes(t.category))
+      .filter(t => ['Click', "Kartaga O'tkazma", 'Uzcard', 'Humo', 'Xarajat'].includes(t.category))
       .reduce((acc, curr) => acc + (curr.amount || 0), 0);
 
     // Profit addition logic for archive
@@ -293,7 +295,7 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
       .reduce((acc, curr) => acc + (curr.amount || 0), 0);
 
     const mainTabs = [
-      { name: 'Kassa', icon: Banknote }, { name: 'Click', icon: CreditCard }, { name: 'Uzcard', icon: Wallet },
+      { name: 'Kassa', icon: Banknote }, { name: "Kartaga O'tkazma", icon: CreditCard }, { name: 'Uzcard', icon: Wallet },
       { name: 'Humo', icon: CreditCard }, { name: 'Xarajat', icon: TrendingDown }, { name: 'Eksport', icon: Download },
     ];
 
@@ -384,7 +386,7 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
                         </div>
                         {stats.filters.click && (
                             <div className="flex justify-between items-center border-b border-slate-50 pb-2">
-                               <span className="text-[12px] font-black text-black uppercase tracking-[0.2em] flex-shrink-0">Click</span>
+                               <span className="text-[12px] font-black text-black uppercase tracking-[0.2em] flex-shrink-0">Kartaga O'tkazma</span>
                                <span className="font-black text-lg text-black">{stats.clickSum.toLocaleString()}</span>
                             </div>
                         )}
@@ -423,7 +425,8 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
         ) : (
           <div className="space-y-6">
             {/* Category Total for archived shift */}
-            {['Click', 'Uzcard', 'Humo', 'Xarajat'].includes(activeTab) && (
+            {/* Updated check array */}
+            {['Click', "Kartaga O'tkazma", 'Uzcard', 'Humo', 'Xarajat'].includes(activeTab) && (
               <div className="grid grid-cols-1 gap-4">
                 <StatCard 
                   label={`Arxiv ${activeTab} Umumiy Summasi`} 

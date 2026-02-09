@@ -169,10 +169,18 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
   const initData = async () => {
     setLoading(true);
     try {
-      let shift = forcedShiftId ? await getShiftById(forcedShiftId) : await getActiveShift();
+      // If forcedShiftId is provided, fetch specific shift. 
+      // Otherwise, don't auto-fetch active shift, just load the list for selection.
+      let shift = forcedShiftId ? await getShiftById(forcedShiftId) : null;
+      
       const categories = await getExpenseCategories();
       setActiveShift(shift);
       setExpenseCategories(categories || []);
+      
+      // Always fetch active shifts list to show on welcome screen
+      const allShifts = await getAllShifts();
+      setActiveShiftsList(allShifts.filter(s => s.status === 'active'));
+
       if (shift) {
         setManualKassaSum(shift.manual_kassa_sum || 0);
         const [trans, configs] = await Promise.all([getTransactionsByShift(shift.id), getCategoryConfigs(shift.id)]);
@@ -185,11 +193,9 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
         });
         setManualSavdoSums(sums);
         setAllExpenseFilters(filters);
-      } else {
-        const allShifts = await getAllShifts();
-        setActiveShiftsList(allShifts.filter(s => s.status === 'active'));
+        
+        if (activeTab === 'Xarajat' && !activeSubTab && categories?.length > 0) setActiveSubTab(categories[0].name);
       }
-      if (activeTab === 'Xarajat' && !activeSubTab && categories?.length > 0) setActiveSubTab(categories[0].name);
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
@@ -505,7 +511,8 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
     const filters = allExpenseFilters[catName] || { xarajat: true, click: false, terminal: false };
     const savdo = manualSavdoSums[catName] || 0;
     const catExpenses = transactions.filter(t => t.category === 'Xarajat' && t.sub_category === catName).reduce((acc, t) => acc + (t.amount || 0), 0);
-    const clickSum = transactions.filter(t => t.category === 'Click').reduce((acc, t) => acc + (t.amount || 0), 0);
+    // Updated: Include both 'Click' and 'Kartaga O'tkazma' for backward compatibility
+    const clickSum = transactions.filter(t => t.category === 'Click' || t.category === "Kartaga O'tkazma").reduce((acc, t) => acc + (t.amount || 0), 0);
     const terminalSum = transactions.filter(t => t.category === 'Uzcard' || t.category === 'Humo').reduce((acc, t) => acc + (t.amount || 0), 0);
     let totalDeduction = 0;
     if (filters.xarajat) totalDeduction += catExpenses;
@@ -614,7 +621,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
           
           ${stats.filters.click ? `
             <div class="row">
-              <span class="label">CLICK</span>
+              <span class="label">KARTAGA O'TKAZMA</span>
               <span class="value">${stats.clickSum.toLocaleString()}</span>
             </div>
           ` : ''}
@@ -712,7 +719,8 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
     </div>
   );
 
-  const totalExpenses = transactions.filter(t => ['Click', 'Uzcard', 'Humo', 'Xarajat'].includes(t.category)).reduce((acc, curr) => acc + (curr.amount || 0), 0) + expenseCategories.reduce((acc, cat) => {
+  // Updated logic to include both 'Click' and "Kartaga O'tkazma"
+  const totalExpenses = transactions.filter(t => ['Click', "Kartaga O'tkazma", 'Uzcard', 'Humo', 'Xarajat'].includes(t.category)).reduce((acc, curr) => acc + (curr.amount || 0), 0) + expenseCategories.reduce((acc, cat) => {
     const stats = calculateCatStats(cat.name);
     return acc + (stats.balance > 0 ? stats.balance : 0);
   }, 0);
@@ -795,7 +803,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
              <div className="space-y-4">
                 {[
                   { id: 'xarajat', label: "Xarajatlarni hisoblash" },
-                  { id: 'click', label: "Click ni hisoblash" },
+                  { id: 'click', label: "Kartaga O'tkazmani hisoblash" }, // Changed Label
                   { id: 'terminal', label: "Terminallarni hisoblash" }
                 ].map((item) => {
                   const currentFilters = allExpenseFilters[activeFilterCategory] || { xarajat: true, click: false, terminal: false };
@@ -886,7 +894,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {['Kassa', 'Click', 'Uzcard', 'Humo', 'Xarajat', 'Eksport'].map(tab => (
+        {['Kassa', "Kartaga O'tkazma", 'Uzcard', 'Humo', 'Xarajat', 'Eksport'].map(tab => (
           <button key={tab} onClick={() => { setActiveTab(tab); if (tab === 'Xarajat' && expenseCategories.length > 0 && !activeSubTab) setActiveSubTab(expenseCategories[0].name); }} className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold border text-sm transition-all ${activeTab === tab ? 'bg-slate-900 text-white dark:bg-white dark:text-black border-slate-900 dark:border-white shadow-lg' : 'bg-white dark:bg-zinc-900 text-slate-500 border-slate-100 dark:border-zinc-800 hover:border-slate-300'}`}>{tab}</button>
         ))}
       </div>
@@ -918,7 +926,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
                         </div>
                         {stats.filters.click && (
                             <div className="flex justify-between items-center border-b border-dashed border-slate-200 dark:border-zinc-700 pb-3">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Click</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kartaga O'tkazma</span>
                                 <span className="font-black text-lg text-slate-900 dark:text-white">{stats.clickSum.toLocaleString()}</span>
                             </div>
                         )}
@@ -972,7 +980,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
 
                         {stats.filters.click && (
                             <div className="flex justify-between items-end">
-                                <span className="text-lg font-black uppercase tracking-widest">CLICK</span>
+                                <span className="text-lg font-black uppercase tracking-widest">KARTAGA O'TKAZMA</span>
                                 <span className="text-3xl font-black">{stats.clickSum.toLocaleString()}</span>
                             </div>
                         )}
