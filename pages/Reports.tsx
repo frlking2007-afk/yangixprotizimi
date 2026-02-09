@@ -9,11 +9,11 @@ import {
   Coins, TrendingUp, Settings2, Calculator, Plus, PlayCircle
 } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
-import { Shift, Transaction, ExpenseCategory } from '../types.ts';
+import { Shift, Transaction, ExpenseCategory, PaymentType } from '../types.ts';
 import { 
   getAllShifts, getTransactionsByShift, deleteShift, 
   getDeletionPassword, getExpenseCategories, getCategoryConfigs,
-  reopenShift
+  reopenShift, getPaymentTypes
 } from '../services/supabase.ts';
 
 const StatCard = ({ label, val, icon, color }: { label: string, val: number, icon: React.ReactNode, color: 'green' | 'red' | 'indigo' | 'amber' }) => {
@@ -53,6 +53,7 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
+  const [paymentTypes, setPaymentTypes] = useState<PaymentType[]>([]);
   const [manualSavdoSums, setManualSavdoSums] = useState<Record<string, number>>({});
   const [allExpenseFilters, setAllExpenseFilters] = useState<Record<string, any>>({});
   
@@ -86,14 +87,16 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
     setActiveTab('Kassa');
     
     try {
-      const [trans, categories, configs] = await Promise.all([
+      const [trans, categories, configs, pTypes] = await Promise.all([
         getTransactionsByShift(shift.id),
         getExpenseCategories(),
-        getCategoryConfigs(shift.id)
+        getCategoryConfigs(shift.id),
+        getPaymentTypes()
       ]);
       
       setTransactions(trans || []);
       setExpenseCategories(categories || []);
+      setPaymentTypes(pTypes || []);
       
       const sums: Record<string, number> = {};
       const filters: Record<string, any> = {};
@@ -124,7 +127,7 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
       .filter(t => t.category === 'Xarajat' && t.sub_category === catName)
       .reduce((acc, t) => acc + (t.amount || 0), 0);
       
-    // Include both "Click" and "Kartaga O'tkazma"
+    // Include all dynamic card types roughly based on standard logic for now
     const clickSum = transactions
       .filter(t => t.category === 'Click' || t.category === "Kartaga O'tkazma")
       .reduce((acc, t) => acc + (t.amount || 0), 0);
@@ -275,10 +278,9 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
 
   // --- DETAILED VIEW ---
   if (selectedShiftId && selectedShift) {
-    // Base expenses (Click, Uzcard, Humo, Xarajat transactions)
-    // Updated to include Kartaga O'tkazma
+    // Base expenses (Click, Uzcard, Humo, Xarajat transactions) + new dynamic types
     const baseExpenses = transactions
-      .filter(t => ['Click', "Kartaga O'tkazma", 'Uzcard', 'Humo', 'Xarajat'].includes(t.category))
+      .filter(t => ['Click', "Kartaga O'tkazma", 'Uzcard', 'Humo', 'Xarajat'].includes(t.category) || paymentTypes.some(pt => pt.name === t.category && pt.type !== 'kassa' && pt.type !== 'export'))
       .reduce((acc, curr) => acc + (curr.amount || 0), 0);
 
     // Profit addition logic for archive
@@ -290,19 +292,25 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
     const totalExpensesAcrossTypes = baseExpenses + positiveProfitSum;
     const totalBalance = (selectedShift.manual_kassa_sum || 0) - totalExpensesAcrossTypes;
 
-    const currentCategoryTotal = transactions
+    const currentTabTotal = transactions
       .filter(t => t.category === activeTab)
       .reduce((acc, curr) => acc + (curr.amount || 0), 0);
 
-    const mainTabs = [
-      { name: 'Kassa', icon: Banknote }, { name: "Kartaga O'tkazma", icon: CreditCard }, { name: 'Uzcard', icon: Wallet },
-      { name: 'Humo', icon: CreditCard }, { name: 'Xarajat', icon: TrendingDown }, { name: 'Eksport', icon: Download },
-    ];
-
     const filteredTransactions = transactions.filter(t => {
       if (activeTab === 'Xarajat') return t.category === 'Xarajat' && (activeSubTab ? t.sub_category === activeSubTab : true);
+      
+      const pt = paymentTypes.find(p => p.name === activeTab);
+      if (pt) {
+         if (pt.type === 'expense' && activeSubTab) {
+             return t.category === activeTab && t.sub_category === activeSubTab;
+         }
+         return t.category === activeTab;
+      }
       return t.category === activeTab;
     });
+    
+    // Determine active payment type
+    const activePaymentType = paymentTypes.find(pt => pt.name === activeTab);
 
     return (
       <div className="space-y-6 animate-in fade-in duration-300 pb-20 no-print">
@@ -335,19 +343,19 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {mainTabs.map((tab) => (
+          {paymentTypes.map((tab) => (
             <button
               key={tab.name}
               onClick={() => {
                 setActiveTab(tab.name);
-                if (tab.name === 'Xarajat' && expenseCategories.length > 0 && !activeSubTab) setActiveSubTab(expenseCategories[0].name);
-                else if (tab.name !== 'Xarajat' && tab.name !== 'Eksport') setActiveSubTab(null);
+                if (tab.type === 'expense' && expenseCategories.length > 0 && !activeSubTab) setActiveSubTab(expenseCategories[0].name);
+                else if (tab.type !== 'expense') setActiveSubTab(null);
               }}
               className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold transition-all border text-sm ${
                 activeTab === tab.name ? 'bg-slate-900 text-white border-slate-900' : 'bg-white dark:bg-zinc-900 text-slate-500 border-slate-100 dark:border-zinc-800'
               }`}
             >
-              <tab.icon size={16} /> {tab.name}
+               {tab.name}
             </button>
           ))}
         </div>
@@ -425,19 +433,18 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
         ) : (
           <div className="space-y-6">
             {/* Category Total for archived shift */}
-            {/* Updated check array */}
-            {['Click', "Kartaga O'tkazma", 'Uzcard', 'Humo', 'Xarajat'].includes(activeTab) && (
+            {activePaymentType?.type !== 'expense' && (
               <div className="grid grid-cols-1 gap-4">
                 <StatCard 
                   label={`Arxiv ${activeTab} Umumiy Summasi`} 
-                  val={currentCategoryTotal} 
-                  icon={activeTab === 'Xarajat' ? <TrendingDown /> : <ArrowUpRight />} 
-                  color={activeTab === 'Xarajat' ? 'red' : 'green'} 
+                  val={currentTabTotal} 
+                  icon={<ArrowUpRight />} 
+                  color={'green'} 
                 />
               </div>
             )}
 
-            {activeTab === 'Xarajat' && (
+            {activePaymentType?.type === 'expense' && (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
                 {expenseCategories.map(cat => (
                   <div key={cat.id} className={`h-12 rounded-xl border transition-all cursor-pointer flex items-center justify-center p-2 ${activeSubTab === cat.name ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-zinc-900 text-slate-600 border-slate-100 dark:border-zinc-800'}`} onClick={() => setActiveSubTab(cat.name)}>
@@ -455,7 +462,7 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
               </div>
             )}
 
-            {activeTab === 'Xarajat' && activeSubTab && (
+            {activePaymentType?.type === 'expense' && activeSubTab && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {(() => {
                   const stats = calculateCatStats(activeSubTab);

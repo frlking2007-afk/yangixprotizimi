@@ -17,6 +17,15 @@ export interface ExpenseCategory {
   sort_order?: number;
 }
 
+export interface PaymentType {
+  id: string;
+  user_id: string;
+  name: string;
+  type: 'kassa' | 'card' | 'expense' | 'export';
+  is_system: boolean;
+  sort_order: number;
+}
+
 export interface Transaction {
   id: string;
   shift_id: string;

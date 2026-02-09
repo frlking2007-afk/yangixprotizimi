@@ -1,6 +1,6 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { Transaction, Shift, ExpenseCategory, Note, BookingCategory, Room, Booking } from '../types';
+import { Transaction, Shift, ExpenseCategory, Note, BookingCategory, Room, Booking, PaymentType } from '../types';
 
 const SUPABASE_URL = 'https://zvaxhyszcdvnylcljgxz.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2YXhoeXN6Y2R2bnlsY2xqZ3h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5OTQwNjUsImV4cCI6MjA4NDU3MDA2NX0.rBsMCwKE6x_vsEAeu4ALz7oJd_vl47VQt8URTxvQ5go';
@@ -17,6 +17,104 @@ const getUser = async () => {
   const { data: { user } } = await supabase.auth.getUser();
   return user;
 };
+
+// --- PAYMENT TYPES (Dynamic Tabs) ---
+
+export const getPaymentTypes = async (): Promise<PaymentType[]> => {
+  const user = await getUser();
+  if (!user) return [];
+  
+  const { data, error } = await supabase
+    .from('payment_types')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('sort_order', { ascending: true });
+    
+  if (error) return [];
+  return data || [];
+};
+
+export const createPaymentType = async (name: string, type: 'card' | 'expense'): Promise<PaymentType | null> => {
+  const user = await getUser();
+  if (!user) return null;
+
+  // Get max sort order
+  const { data: currentTypes } = await supabase
+    .from('payment_types')
+    .select('sort_order')
+    .order('sort_order', { ascending: false })
+    .limit(1);
+    
+  const nextOrder = (currentTypes && currentTypes[0]?.sort_order || 0) + 1;
+
+  const { data, error } = await supabase
+    .from('payment_types')
+    .insert([{ 
+      name, 
+      type, 
+      user_id: user.id, 
+      is_system: false,
+      sort_order: nextOrder
+    }])
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Create payment type error:", error);
+    return null;
+  }
+  return data;
+};
+
+export const updatePaymentTypeName = async (id: string, newName: string, oldName: string): Promise<void> => {
+  const user = await getUser();
+  if (!user) return;
+
+  // 1. Update the Payment Type Name
+  const { error } = await supabase
+    .from('payment_types')
+    .update({ name: newName })
+    .eq('id', id);
+
+  if (error) throw error;
+
+  // 2. Update all past transactions that used the old name
+  // Note: In a real production app, we would use IDs for relationships, 
+  // but since transactions store category as string, we migrate data.
+  await supabase
+    .from('transactions')
+    .update({ category: newName })
+    .eq('user_id', user.id)
+    .eq('category', oldName);
+    
+  // Also update category_configs if any
+  await supabase
+    .from('category_configs')
+    .update({ category_name: newName })
+    .eq('user_id', user.id)
+    .eq('category_name', oldName);
+};
+
+export const deletePaymentType = async (id: string): Promise<void> => {
+  const { error } = await supabase.from('payment_types').delete().eq('id', id);
+  if (error) throw error;
+};
+
+export const updatePaymentTypesOrder = async (types: PaymentType[]): Promise<void> => {
+  const updates = types.map((t, index) => ({
+    id: t.id,
+    user_id: t.user_id,
+    name: t.name,
+    type: t.type,
+    is_system: t.is_system,
+    sort_order: index
+  }));
+
+  const { error } = await supabase.from('payment_types').upsert(updates);
+  if (error) console.error("Reorder error", error);
+};
+
+// --- END PAYMENT TYPES ---
 
 // BOOKING FUNCTIONS
 export const getBookingCategories = async (): Promise<BookingCategory[]> => {
