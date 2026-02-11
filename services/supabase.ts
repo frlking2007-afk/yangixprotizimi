@@ -2,8 +2,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { Transaction, Shift, ExpenseCategory, Note, BookingCategory, Room, Booking, PaymentType } from '../types';
 
-const SUPABASE_URL = 'https://zvaxhyszcdvnylcljgxz.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2YXhoeXN6Y2R2bnlsY2xqZ3h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5OTQwNjUsImV4cCI6MjA4NDU3MDA2NX0.rBsMCwKE6x_vsEAeu4ALz7oJd_vl47VQt8URTxvQ5go';
+const SUPABASE_URL = 'https://typpwuvgbvqtsdrfgdva.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5cHB3dXZnYnZxdHNkcmZnZHZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4MDI1NzMsImV4cCI6MjA4NjM3ODU3M30.6E3CCZIVi0INrJ8gxB-hm0wXNQLl-4hhnhQekuN9rek';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {

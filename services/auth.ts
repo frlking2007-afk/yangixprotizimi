@@ -7,6 +7,13 @@ export const login = async (email: string, password: string) => {
     password,
   });
   if (error) throw error;
+
+  // Check for app metadata
+  if (data.user?.user_metadata?.app !== 'xpro_user') {
+    await supabase.auth.signOut();
+    throw new Error("Ushbu foydalanuvchi tizimga kira olmaydi.");
+  }
+
   return data;
 };
 
