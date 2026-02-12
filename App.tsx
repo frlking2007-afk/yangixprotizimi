@@ -1,13 +1,23 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Layout from './components/Layout.tsx';
-import XPro from './pages/XPro.tsx';
-import Reports from './pages/Reports.tsx';
-import Settings from './pages/Settings.tsx';
-import Notebook from './pages/Notebook.tsx';
-import Booking from './pages/Booking.tsx';
+// Lazy load pages to reduce initial bundle size
+const XPro = React.lazy(() => import('./pages/XPro.tsx'));
+const Reports = React.lazy(() => import('./pages/Reports.tsx'));
+const Settings = React.lazy(() => import('./pages/Settings.tsx'));
+const Notebook = React.lazy(() => import('./pages/Notebook.tsx'));
+const Booking = React.lazy(() => import('./pages/Booking.tsx'));
 import Login from './pages/Login.tsx';
 import { supabase, getBusinessDetails } from './services/supabase.ts';
+import { RefreshCcw } from 'lucide-react';
+
+// Loading component for Suspense
+const PageLoader = () => (
+  <div className="flex flex-col items-center justify-center h-[50vh] animate-in fade-in duration-300">
+    <RefreshCcw className="animate-spin text-slate-400 dark:text-zinc-600 mb-4" size={32} />
+    <p className="text-slate-400 font-medium text-sm">Yuklanmoqda...</p>
+  </div>
+);
 
 const App: React.FC = () => {
   // Sahifani yangilaganda oxirgi tabni eslab qolish
@@ -96,10 +106,10 @@ const App: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-zinc-950 hacker:bg-black transition-colors duration-300">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-zinc-950 transition-colors duration-300">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-slate-900 dark:border-white hacker:border-[#0f0] border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-slate-400 font-medium hacker:text-[#0f0] animate-pulse">Tizim yuklanmoqda...</p>
+          <div className="w-10 h-10 border-4 border-slate-900 dark:border-white border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-slate-400 font-medium animate-pulse">Tizim yuklanmoqda...</p>
         </div>
       </div>
     );
@@ -132,7 +142,7 @@ const App: React.FC = () => {
       case 'xisobotlar':
         return <Reports onContinueShift={handleContinueShift} />;
       case 'bron':
-        // Double check protection, though layout should hide link
+        // Double check protection
         if (tarifPlan === 'LITE') return <div className="p-10 text-center text-slate-500">Ushbu funksiya sizning tarifingizda mavjud emas.</div>;
         return <Booking />;
       case 'notebook':
@@ -153,7 +163,9 @@ const App: React.FC = () => {
       tarifPlan={tarifPlan}
       businessName={businessName}
     >
-      {renderContent()}
+      <Suspense fallback={<PageLoader />}>
+        {renderContent()}
+      </Suspense>
     </Layout>
   );
 };

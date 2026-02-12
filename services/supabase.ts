@@ -2,8 +2,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { Transaction, Shift, ExpenseCategory, Note, BookingCategory, Room, Booking, PaymentType } from '../types';
 
-const SUPABASE_URL = 'https://typpwuvgbvqtsdrfgdva.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5cHB3dXZnYnZxdHNkcmZnZHZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4MDI1NzMsImV4cCI6MjA4NjM3ODU3M30.6E3CCZIVi0INrJ8gxB-hm0wXNQLl-4hhnhQekuN9rek';
+// Use environment variables for Supabase connection
+// Make sure to add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your .env file or Vercel project settings
+// Fallback to specific provided credentials if env vars are missing
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://typpwuvgbvqtsdrfgdva.supabase.co';
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5cHB3dXZnYnZxdHNkcmZnZHZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4MDI1NzMsImV4cCI6MjA4NjM3ODU3M30.6E3CCZIVi0INrJ8gxB-hm0wXNQLl-4hhnhQekuN9rek';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
@@ -749,3 +752,4 @@ export const setDeletionPasswordState = async (enabled: boolean): Promise<void> 
     throw new Error(err.message || "Xatolik yuz berdi");
   }
 };
+    
