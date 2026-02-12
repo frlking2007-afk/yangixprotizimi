@@ -19,7 +19,7 @@ import {
   getExpenseCategories, updateTransaction, getDeletionPassword,
   createExpenseCategory, updateExpenseCategory, deleteExpenseCategory,
   saveTransaction, updateShiftManualSum, getCategoryConfigs, upsertCategoryConfig,
-  updateExpenseCategoriesOrder, getShiftById, getAllShifts, updateShiftName, deleteShift,
+  updateExpenseCategoriesOrder, getShiftById, getActiveShiftsOnly, updateShiftName, deleteShift,
   getPaymentTypes, createPaymentType, updatePaymentTypeName, deletePaymentType, updatePaymentTypesOrder
 } from '../services/supabase.ts';
 
@@ -185,25 +185,33 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
   const initData = async () => {
     setLoading(true);
     try {
-      // If forcedShiftId is provided, fetch specific shift. 
-      // Otherwise, don't auto-fetch active shift, just load the list for selection.
-      let shift = forcedShiftId ? await getShiftById(forcedShiftId) : null;
-      
-      const categories = await getExpenseCategories();
-      const pTypes = await getPaymentTypes();
+      // Parallelize fetches as much as possible
+      const [categories, pTypes, allActiveShifts] = await Promise.all([
+        getExpenseCategories(),
+        getPaymentTypes(),
+        getActiveShiftsOnly() // Optimization: Fetch only active shifts
+      ]);
 
-      setActiveShift(shift);
       setExpenseCategories(categories || []);
       setPaymentTypes(pTypes || []);
+      setActiveShiftsList(allActiveShifts || []);
       
-      // Always fetch active shifts list to show on welcome screen
-      const allShifts = await getAllShifts();
-      setActiveShiftsList(allShifts.filter(s => s.status === 'active'));
+      let shift = null;
+      if (forcedShiftId) {
+        shift = await getShiftById(forcedShiftId);
+      }
+      setActiveShift(shift);
 
       if (shift) {
         setManualKassaSum(shift.manual_kassa_sum || 0);
-        const [trans, configs] = await Promise.all([getTransactionsByShift(shift.id), getCategoryConfigs(shift.id)]);
+        // Parallel fetch for shift details
+        const [trans, configs] = await Promise.all([
+            getTransactionsByShift(shift.id), 
+            getCategoryConfigs(shift.id)
+        ]);
+        
         setTransactions(trans || []);
+        
         const sums: Record<string, number> = {};
         const filters: Record<string, any> = {};
         configs.forEach(cfg => {
@@ -432,13 +440,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
                 await updatePaymentTypeName(pt.id, newName.trim(), pt.name);
                 // Update local state
                 setPaymentTypes(prev => prev.map(p => p.id === pt.id ? { ...p, name: newName.trim() } : p));
-                
-                // If active tab was this one, update active tab
                 if (activeTab === pt.name) setActiveTab(newName.trim());
-                
-                // Refresh transactions to reflect category name change if needed (though local update might suffice)
-                const updatedTrans = await getTransactionsByShift(activeShift!.id);
-                setTransactions(updatedTrans || []);
             }
         }
     });
@@ -446,7 +448,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
 
   const handleDeletePaymentType = (e: React.MouseEvent, pt: PaymentType) => {
     e.stopPropagation();
-    if (pt.is_system) return; // Should be handled by UI check, but safe guard
+    if (pt.is_system) return; 
     openModal({
         title: "Kategoriyani o'chirish",
         description: `"${pt.name}" kategoriyasini o'chirishga aminmisiz?`,
@@ -498,7 +500,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
 
     setIsSaving(true);
     try {
-      await saveTransaction({
+      const newTx = await saveTransaction({
         shift_id: activeShift.id,
         amount: numAmount,
         category: activeTab,
@@ -507,8 +509,11 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
         type: transType
       });
       setAmountInput(''); setDescInput('');
-      const updatedTrans = await getTransactionsByShift(activeShift.id);
-      setTransactions(updatedTrans || []);
+      
+      // OPTIMISTIC UPDATE: Add to list immediately
+      if (newTx) {
+          setTransactions(prev => [newTx, ...prev]);
+      }
     } catch (err) {
       alert("Xatolik saqlashda");
     } finally {
@@ -537,11 +542,15 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
     if (!editingTransaction || !activeShift) return;
     const num = parseFloat(editAmountVal.replace(/\s/g, ''));
     if (isNaN(num) || num <= 0) return;
+    
     setEditTransModalOpen(false);
-    await updateTransaction(editingTransaction.id, { amount: num, description: editDescVal });
-    const updatedTrans = await getTransactionsByShift(activeShift.id);
-    setTransactions(updatedTrans || []);
+    
+    // OPTIMISTIC UPDATE
+    const updatedTx = { ...editingTransaction, amount: num, description: editDescVal };
+    setTransactions(prev => prev.map(t => t.id === editingTransaction.id ? updatedTx : t));
     setEditingTransaction(null);
+
+    await updateTransaction(editingTransaction.id, { amount: num, description: editDescVal });
   };
 
   const handleAddAmountClick = (t: Transaction) => {
@@ -562,11 +571,14 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
     const addedAmount = parseFloat(val.replace(/\s/g, ''));
     if (isNaN(addedAmount) || addedAmount <= 0) return;
     const newTotal = targetAddTransaction.amount + addedAmount;
+    
     setAddAmountModalOpen(false);
-    await updateTransaction(targetAddTransaction.id, { amount: newTotal });
-    const updatedTrans = await getTransactionsByShift(activeShift.id);
-    setTransactions(updatedTrans || []);
+
+    // OPTIMISTIC UPDATE
+    setTransactions(prev => prev.map(t => t.id === targetAddTransaction.id ? { ...t, amount: newTotal } : t));
     setTargetAddTransaction(null);
+
+    await updateTransaction(targetAddTransaction.id, { amount: newTotal });
   };
 
   const handleDeleteTransaction = async (id: string) => {
@@ -577,11 +589,11 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
       onConfirm: async (password) => {
         const correctPassword = await getDeletionPassword();
         if (password !== correctPassword) return alert("Parol noto'g'ri!");
+        
+        // OPTIMISTIC UPDATE
+        setTransactions(prev => prev.filter(t => t.id !== id));
+        
         await deleteTransaction(id);
-        if (activeShift) {
-          const updatedTrans = await getTransactionsByShift(activeShift.id);
-          setTransactions(updatedTrans || []);
-        }
       }
     });
   };
@@ -590,18 +602,10 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
     const filters = allExpenseFilters[catName] || { xarajat: true, click: false, terminal: false };
     const savdo = manualSavdoSums[catName] || 0;
     
-    // Loop through ALL payment types to calculate dynamic totals
     let totalDeduction = 0;
     const catExpenses = transactions.filter(t => t.category === 'Xarajat' && t.sub_category === catName).reduce((acc, t) => acc + (t.amount || 0), 0);
     
     if (filters.xarajat) totalDeduction += catExpenses;
-    
-    // Dynamic deductions based on type (simple logic for now: 'card' type is treated like click/terminal depending on name, 
-    // OR we just iterate all 'card' types and check if they are enabled in filters? 
-    // CURRENT LOGIC: Hardcoded filters for 'click' and 'terminal'. 
-    // To support dynamic tabs properly in filters, we would need dynamic filter keys. 
-    // For now, let's map standard names to filters, and maybe ignore custom ones or assume they are not deducted unless specified.
-    // Simplifying for User Request: "click" usually means "Kartaga O'tkazma" now. "terminal" means Uzcard/Humo.
     
     const clickSum = transactions.filter(t => t.category === "Kartaga O'tkazma" || t.category === 'Click').reduce((acc, t) => acc + (t.amount || 0), 0);
     const terminalSum = transactions.filter(t => t.category === 'Uzcard' || t.category === 'Humo').reduce((acc, t) => acc + (t.amount || 0), 0);

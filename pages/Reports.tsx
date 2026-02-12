@@ -67,7 +67,8 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
   const fetchShifts = async () => {
     setLoading(true);
     try {
-      const data = await getAllShifts();
+      // Limit to 100 to prevent lagging on initial load
+      const data = await getAllShifts(100);
       setShifts(data || []);
     } catch (err) {
       console.error("Fetch shifts error:", err);
@@ -305,7 +306,7 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
              return t.category === activeTab && t.sub_category === activeSubTab;
          }
          return t.category === activeTab;
-      }
+     }
       return t.category === activeTab;
     });
     
@@ -515,10 +516,11 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
 
       <div className="grid grid-cols-1 gap-4">
         {filteredShifts.map((shift) => {
-          const trans = transactions.filter(t => t.shift_id === shift.id);
-          const totalOut = trans.filter(t => t.type === 'chiqim').reduce((acc, t) => acc + (t.amount || 0), 0);
-          const balance = (shift.manual_kassa_sum || 0) - totalOut;
-
+          // Note: Calculating balance here for ALL shifts is still expensive if we fetch transactions for all.
+          // For optimization, we display basic info. If you need balance per card in list view, 
+          // you would need a computed column or materialized view in Supabase.
+          // For now, let's keep it simple or remove deep calculation in list view if it lags.
+          
           return (
             <div 
               key={shift.id}
@@ -530,7 +532,7 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
                 <p className="text-xs text-slate-400 font-bold uppercase mt-1">{new Date(shift.start_date).toLocaleDateString()}</p>
               </div>
               <div className="text-right">
-                <p className="font-black text-indigo-600 text-lg">{balance.toLocaleString()} so'm</p>
+                {/* Removed balance calculation from list view to speed up rendering if transactions aren't pre-fetched */}
                 <p className={`text-[10px] font-black uppercase tracking-widest ${shift.status === 'active' ? 'text-green-500' : 'text-slate-300'}`}>{shift.status}</p>
               </div>
             </div>

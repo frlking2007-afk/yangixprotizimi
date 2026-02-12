@@ -13,9 +13,44 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   }
 });
 
+// --- CACHING LAYER ---
+let cachedUser: any = null;
+let cachedBusinessId: string | null = null;
+
+// Clear cache on logout
+supabase.auth.onAuthStateChange((event) => {
+  if (event === 'SIGNED_OUT') {
+    cachedUser = null;
+    cachedBusinessId = null;
+  }
+});
+
 const getUser = async () => {
+  if (cachedUser) return cachedUser;
+  
   const { data: { user } } = await supabase.auth.getUser();
+  if (user) cachedUser = user;
   return user;
+};
+
+// Helper to get current session's business ID with Caching
+const getCurrentBusinessId = async () => {
+  if (cachedBusinessId) return cachedBusinessId;
+
+  const user = await getUser();
+  if (!user) return null;
+  
+  const { data } = await supabase
+    .from('customers')
+    .select('business_id')
+    .eq('user_id', user.id) 
+    .maybeSingle();
+    
+  if (data?.business_id) {
+    cachedBusinessId = data.business_id;
+  }
+  
+  return data?.business_id;
 };
 
 // --- BUSINESS LOGIC HELPERS ---
@@ -35,10 +70,11 @@ export const getBusinessDetails = async (userId: string) => {
     }
     
     if (!customer) {
-        // If customer record missing, user might be new or manual entry failed.
-        // Return null to fall back to LITE/Default mode.
         return null;
     }
+
+    // Cache the business ID immediately
+    cachedBusinessId = customer.business_id;
 
     // 2. Get tarif_plan AND business_name from businesses table
     const { data: business, error: busError } = await supabase
@@ -48,7 +84,6 @@ export const getBusinessDetails = async (userId: string) => {
       .maybeSingle();
 
     if (busError || !business) {
-        console.warn("Business not found for ID:", customer.business_id);
         return { business_id: customer.business_id, tarif_plan: 'LITE', name: 'Nomsiz Biznes' };
     }
 
@@ -61,20 +96,6 @@ export const getBusinessDetails = async (userId: string) => {
     console.error("Error fetching business details:", error);
     return null;
   }
-};
-
-// Helper to get current session's business ID for inserts
-const getCurrentBusinessId = async () => {
-  const user = await getUser();
-  if (!user) return null;
-  
-  const { data } = await supabase
-    .from('customers')
-    .select('business_id')
-    .eq('user_id', user.id) 
-    .maybeSingle();
-    
-  return data?.business_id;
 };
 
 // --- PAYMENT TYPES (Dynamic Tabs) ---
@@ -139,17 +160,20 @@ export const updatePaymentTypeName = async (id: string, newName: string, oldName
 
   if (error) throw error;
 
-  await supabase
+  // Background updates (don't await strictly if speed is needed, but safer to await)
+  const p1 = supabase
     .from('transactions')
     .update({ category: newName })
     .eq('user_id', user.id)
     .eq('category', oldName);
     
-  await supabase
+  const p2 = supabase
     .from('category_configs')
     .update({ category_name: newName })
     .eq('user_id', user.id)
     .eq('category_name', oldName);
+    
+  await Promise.all([p1, p2]);
 };
 
 export const deletePaymentType = async (id: string): Promise<void> => {
@@ -227,7 +251,6 @@ export const getRooms = async (categoryId?: string): Promise<Room[]> => {
   const { data, error } = await query.order('name', { ascending: true });
   
   if (error) {
-    console.error("Error fetching rooms:", error);
     return [];
   }
   return data || [];
@@ -250,7 +273,6 @@ export const createRoom = async (categoryId: string, name: string): Promise<Room
     .select()
     .single();
   if (error) {
-    console.error("Error creating room:", error);
     return null;
   }
   return data;
@@ -285,7 +307,6 @@ export const getBookingsForDate = async (date: Date): Promise<Booking[]> => {
     .lte('booking_time', endDate.toISOString());
 
   if (error) {
-    console.error("Error fetching bookings:", error);
     return [];
   }
   return data || [];
@@ -303,7 +324,6 @@ export const createBooking = async (bookingData: Omit<Booking, 'id' | 'created_a
     .single();
 
   if (error) {
-    console.error("Booking create error:", error);
     return null;
   }
   return data;
@@ -319,6 +339,7 @@ export const deleteBooking = async (bookingId: string): Promise<void> => {
 export const getActiveShift = async (): Promise<Shift | null> => {
   try {
     const user = await getUser();
+    // Optimized: Select only needed columns if needed, but keeping * is fine for single row
     const { data, error } = await supabase
       .from('shifts')
       .select('*')
@@ -355,7 +376,6 @@ export const updateShiftName = async (shiftId: string, name: string): Promise<vo
       .eq('id', shiftId);
     if (error) throw error;
   } catch (err) {
-    console.error("Update shift name error:", err);
     throw err;
   }
 };
@@ -403,14 +423,34 @@ export const reopenShift = async (shiftId: string): Promise<void> => {
   }
 };
 
-export const getAllShifts = async (): Promise<Shift[]> => {
+// Optimized: Get Active Shifts Only
+export const getActiveShiftsOnly = async (): Promise<Shift[]> => {
+  try {
+    const user = await getUser();
+    const { data, error } = await supabase
+      .from('shifts')
+      .select('id, name, start_date, status')
+      .eq('user_id', user?.id || '')
+      .eq('status', 'active')
+      .order('start_date', { ascending: false });
+      
+    if (error) throw error;
+    return data || [];
+  } catch {
+    return [];
+  }
+}
+
+// Optimized: Get All Shifts with Limit
+export const getAllShifts = async (limit = 50): Promise<Shift[]> => {
   try {
     const user = await getUser();
     const { data, error } = await supabase
       .from('shifts')
       .select('*')
       .eq('user_id', user?.id || '')
-      .order('start_date', { ascending: false });
+      .order('start_date', { ascending: false })
+      .limit(limit); // Add limit to prevent loading thousands of rows
     if (error) throw error;
     return data || [];
   } catch {
