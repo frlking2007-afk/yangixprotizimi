@@ -22,16 +22,11 @@ const getUser = async () => {
 
 export const getBusinessDetails = async (userId: string) => {
   try {
-    // 1. Get business_id from customers table using auth.user.id
-    // Note: Assuming the column in customers table linking to auth is 'auth_user_id' or 'user_id'
-    // Adjusting to 'user_id' based on common Supabase patterns, or 'id' if the customer id matches auth id.
-    // Let's assume 'auth_user_id' based on the prompt's context of finding business_id via auth.id
-    
-    // Using maybeSingle to avoid errors if not found immediately
+    // 1. Get business_id from customers table using user_id (Match Screenshot)
     const { data: customer, error: custError } = await supabase
       .from('customers')
       .select('business_id')
-      .eq('auth_user_id', userId) 
+      .eq('user_id', userId) // Changed from auth_user_id to user_id based on schema
       .maybeSingle();
 
     if (custError || !customer) {
@@ -39,21 +34,22 @@ export const getBusinessDetails = async (userId: string) => {
         return null; 
     }
 
-    // 2. Get tarif_plan from businesses table
+    // 2. Get tarif_plan AND business_name from businesses table (Match Screenshot)
     const { data: business, error: busError } = await supabase
       .from('businesses')
-      .select('tarif_plan')
+      .select('tarif_plan, business_name') // Changed from name to business_name
       .eq('id', customer.business_id)
       .single();
 
     if (busError) {
         console.warn("Business not found:", busError);
-        return { business_id: customer.business_id, tarif_plan: 'LITE' }; // Default to LITE if error
+        return { business_id: customer.business_id, tarif_plan: 'LITE', name: 'Nomsiz Biznes' };
     }
 
     return { 
       business_id: customer.business_id, 
-      tarif_plan: business.tarif_plan 
+      tarif_plan: business.tarif_plan,
+      name: business.business_name // Map business_name to name
     };
   } catch (error) {
     console.error("Error fetching business details:", error);
@@ -66,13 +62,10 @@ const getCurrentBusinessId = async () => {
   const user = await getUser();
   if (!user) return null;
   
-  // We try to fetch from local storage first if we cached it (optional optimization), 
-  // but for reliability here we fetch from DB or assume the cached profile in App.tsx handles state.
-  // For insert functions, we'll do a quick lookup.
   const { data } = await supabase
     .from('customers')
     .select('business_id')
-    .eq('auth_user_id', user.id)
+    .eq('user_id', user.id) // Changed from auth_user_id to user_id
     .maybeSingle();
     
   return data?.business_id;
@@ -84,7 +77,6 @@ export const getPaymentTypes = async (): Promise<PaymentType[]> => {
   const user = await getUser();
   if (!user) return [];
   
-  // RLS typically handles filtering by user/business, but we pass user_id explicitly just in case
   const { data, error } = await supabase
     .from('payment_types')
     .select('*')
@@ -104,7 +96,7 @@ export const createPaymentType = async (name: string, type: 'card' | 'expense'):
   const { data: currentTypes } = await supabase
     .from('payment_types')
     .select('sort_order')
-    .eq('user_id', user.id) // Filter by user to get their sort order
+    .eq('user_id', user.id)
     .order('sort_order', { ascending: false })
     .limit(1);
     
@@ -163,7 +155,6 @@ export const updatePaymentTypesOrder = async (types: PaymentType[]): Promise<voi
   const updates = types.map((t, index) => ({
     id: t.id,
     user_id: t.user_id,
-    // We assume business_id is already on the object or DB handles it via RLS on update
     name: t.name,
     type: t.type,
     is_system: t.is_system,
@@ -492,9 +483,6 @@ export const saveTransaction = async (transaction: Omit<Transaction, 'id' | 'dat
   const user = await getUser();
   const businessId = await getCurrentBusinessId();
   try {
-    // Note: Assuming 'transactions' is the table name. If user meant 'xpro_user_data' to REPLACE transactions,
-    // we would change it here. But usually applications have multiple tables.
-    // We add business_id to the insert payload.
     const { data, error } = await supabase
       .from('transactions')
       .insert([{ ...transaction, user_id: user?.id, business_id: businessId }])

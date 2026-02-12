@@ -9,9 +9,10 @@ interface LayoutProps {
   searchQuery?: string;
   setSearchQuery?: (query: string) => void;
   tarifPlan?: string;
+  businessName?: string;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, searchQuery = '', setSearchQuery, tarifPlan = 'LITE' }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, searchQuery = '', setSearchQuery, tarifPlan = 'LITE', businessName = 'Admin' }) => {
   // Sidebar holatini eslab qolish
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     return localStorage.getItem('xpro_sidebar_collapsed') === 'true';
@@ -55,6 +56,11 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, sear
 
   // Qidiruv faqat XPro sahifasida chiqishi kerak
   const showSearch = activeTab === 'xpro';
+
+  // Generate initials from business name (first 2 chars)
+  const getInitials = (name: string) => {
+    return name ? name.slice(0, 2).toUpperCase() : 'AD';
+  };
 
   return (
     <div className="min-h-screen flex bg-slate-50 dark:bg-zinc-950 hacker:bg-black transition-all duration-300">
@@ -137,11 +143,11 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, sear
           <div className="p-4 border-t border-slate-50 dark:border-zinc-800 mt-auto">
             <div className={`flex items-center gap-3 p-3 bg-slate-50 dark:bg-zinc-800 rounded-2xl border border-slate-100 dark:border-zinc-700 ${isSidebarCollapsed ? 'justify-center' : ''}`}>
                <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-zinc-700 flex items-center justify-center text-slate-800 dark:text-white shrink-0">
-                  <span className="font-black text-sm">AD</span>
+                  <span className="font-black text-sm">{getInitials(businessName)}</span>
                </div>
                {!isSidebarCollapsed && (
                  <div className="overflow-hidden animate-in fade-in duration-500">
-                    <p className="text-xs font-black text-slate-800 dark:text-white truncate">Admin</p>
+                    <p className="text-xs font-black text-slate-800 dark:text-white truncate">{businessName}</p>
                     <p className="text-[10px] font-bold text-slate-400 uppercase">{tarifPlan} Plan</p>
                  </div>
                )}

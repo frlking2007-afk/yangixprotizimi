@@ -18,6 +18,7 @@ const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [tarifPlan, setTarifPlan] = useState<string>('LITE'); // Default to LITE
+  const [businessName, setBusinessName] = useState<string>('Admin'); // Default name
   
   // Search State (Global)
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
@@ -27,27 +28,37 @@ const App: React.FC = () => {
 
   const fetchUserPlan = async (userId: string) => {
     const details = await getBusinessDetails(userId);
-    if (details && details.tarif_plan) {
-      setTarifPlan(details.tarif_plan);
+    if (details) {
+      if (details.tarif_plan) setTarifPlan(details.tarif_plan);
+      if (details.name) setBusinessName(details.name);
     }
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        fetchUserPlan(session.user.id);
+    const initSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+        if (session?.user) {
+          // Biznes ma'lumotlarini yuklashni kutamiz (Auto-detect)
+          await fetchUserPlan(session.user.id);
+        }
+      } catch (error) {
+        console.error("Session init error:", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    }).catch(err => {
-      console.error("Auth session error:", err);
-      setLoading(false);
-    });
+    };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    initSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       if (session?.user) {
-        fetchUserPlan(session.user.id);
+        // Login qilinganda ham ma'lumotlarni yangilaymiz
+        setLoading(true);
+        await fetchUserPlan(session.user.id);
+        setLoading(false);
       }
     });
 
@@ -64,7 +75,7 @@ const App: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-zinc-950 hacker:bg-black transition-colors duration-300">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-slate-900 dark:border-white hacker:border-[#0f0] border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-slate-400 font-medium hacker:text-[#0f0]">Yuklanmoqda...</p>
+          <p className="text-slate-400 font-medium hacker:text-[#0f0]">Tizim yuklanmoqda...</p>
         </div>
       </div>
     );
@@ -116,6 +127,7 @@ const App: React.FC = () => {
       searchQuery={globalSearchQuery}
       setSearchQuery={setGlobalSearchQuery}
       tarifPlan={tarifPlan}
+      businessName={businessName}
     >
       {renderContent()}
     </Layout>
