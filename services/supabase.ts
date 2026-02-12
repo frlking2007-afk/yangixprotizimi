@@ -22,34 +22,40 @@ const getUser = async () => {
 
 export const getBusinessDetails = async (userId: string) => {
   try {
-    // 1. Get business_id from customers table using user_id (Match Screenshot)
+    // 1. Get business_id from customers table using user_id
     const { data: customer, error: custError } = await supabase
       .from('customers')
       .select('business_id')
-      .eq('user_id', userId) // Changed from auth_user_id to user_id based on schema
+      .eq('user_id', userId) 
       .maybeSingle();
 
-    if (custError || !customer) {
-        console.warn("Customer not found or error:", custError);
+    if (custError) {
+        console.warn("Error fetching customer:", custError);
         return null; 
     }
+    
+    if (!customer) {
+        // If customer record missing, user might be new or manual entry failed.
+        // Return null to fall back to LITE/Default mode.
+        return null;
+    }
 
-    // 2. Get tarif_plan AND business_name from businesses table (Match Screenshot)
+    // 2. Get tarif_plan AND business_name from businesses table
     const { data: business, error: busError } = await supabase
       .from('businesses')
-      .select('tarif_plan, business_name') // Changed from name to business_name
+      .select('tarif_plan, business_name')
       .eq('id', customer.business_id)
-      .single();
+      .maybeSingle();
 
-    if (busError) {
-        console.warn("Business not found:", busError);
+    if (busError || !business) {
+        console.warn("Business not found for ID:", customer.business_id);
         return { business_id: customer.business_id, tarif_plan: 'LITE', name: 'Nomsiz Biznes' };
     }
 
     return { 
       business_id: customer.business_id, 
       tarif_plan: business.tarif_plan,
-      name: business.business_name // Map business_name to name
+      name: business.business_name 
     };
   } catch (error) {
     console.error("Error fetching business details:", error);
@@ -65,7 +71,7 @@ const getCurrentBusinessId = async () => {
   const { data } = await supabase
     .from('customers')
     .select('business_id')
-    .eq('user_id', user.id) // Changed from auth_user_id to user_id
+    .eq('user_id', user.id) 
     .maybeSingle();
     
   return data?.business_id;
@@ -108,7 +114,7 @@ export const createPaymentType = async (name: string, type: 'card' | 'expense'):
       name, 
       type, 
       user_id: user.id, 
-      business_id: businessId, // Inject business_id
+      business_id: businessId, 
       is_system: false,
       sort_order: nextOrder
     }])

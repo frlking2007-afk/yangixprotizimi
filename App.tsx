@@ -35,34 +35,58 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
+    let mounted = true;
+
+    // Safety timeout: If loading takes more than 7 seconds, force disable loading
+    const safetyTimer = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn("Loading timed out, forcing render");
+        setLoading(false);
+      }
+    }, 7000);
+
     const initSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-        if (session?.user) {
-          // Biznes ma'lumotlarini yuklashni kutamiz (Auto-detect)
-          await fetchUserPlan(session.user.id);
+        if (mounted) {
+           setSession(session);
+           if (session?.user) {
+             // Biznes ma'lumotlarini yuklashni kutamiz (Auto-detect)
+             await fetchUserPlan(session.user.id);
+           }
         }
       } catch (error) {
         console.error("Session init error:", error);
       } finally {
-        setLoading(false);
+        if (mounted) {
+           setLoading(false);
+           clearTimeout(safetyTimer);
+        }
       }
     };
 
     initSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
       setSession(session);
-      if (session?.user) {
-        // Login qilinganda ham ma'lumotlarni yangilaymiz
+      
+      if (event === 'SIGNED_IN' && session?.user) {
+        // Only trigger blocking load on explicit sign in
         setLoading(true);
         await fetchUserPlan(session.user.id);
-        setLoading(false);
+        if (mounted) setLoading(false);
+      } else if (session?.user) {
+        // Silent update for other events
+        fetchUserPlan(session.user.id);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      clearTimeout(safetyTimer);
+      subscription.unsubscribe();
+    };
   }, []);
 
   // activeTab o'zgarganda localStorage-ga saqlash
@@ -75,7 +99,7 @@ const App: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-zinc-950 hacker:bg-black transition-colors duration-300">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-slate-900 dark:border-white hacker:border-[#0f0] border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-slate-400 font-medium hacker:text-[#0f0]">Tizim yuklanmoqda...</p>
+          <p className="text-slate-400 font-medium hacker:text-[#0f0] animate-pulse">Tizim yuklanmoqda...</p>
         </div>
       </div>
     );
