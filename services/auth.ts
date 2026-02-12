@@ -8,11 +8,9 @@ export const login = async (email: string, password: string) => {
   });
   if (error) throw error;
 
-  // Check for app metadata
-  if (data.user?.user_metadata?.app !== 'xpro_user') {
-    await supabase.auth.signOut();
-    throw new Error("Ushbu foydalanuvchi tizimga kira olmaydi.");
-  }
+  // Note: Previous metadata check (app: 'xpro_user') is removed as we now rely
+  // on the customers table link which is handled in App.tsx via getBusinessDetails.
+  // If a user has no customer record, they will technically log in but have LITE/No plan functionality.
 
   return data;
 };

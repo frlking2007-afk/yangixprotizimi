@@ -7,7 +7,7 @@ import Settings from './pages/Settings.tsx';
 import Notebook from './pages/Notebook.tsx';
 import Booking from './pages/Booking.tsx';
 import Login from './pages/Login.tsx';
-import { supabase } from './services/supabase.ts';
+import { supabase, getBusinessDetails } from './services/supabase.ts';
 
 const App: React.FC = () => {
   // Sahifani yangilaganda oxirgi tabni eslab qolish
@@ -17,6 +17,7 @@ const App: React.FC = () => {
   
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [tarifPlan, setTarifPlan] = useState<string>('LITE'); // Default to LITE
   
   // Search State (Global)
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
@@ -24,9 +25,19 @@ const App: React.FC = () => {
   // State to handle opening a specific shift from Reports in XPro
   const [targetShiftId, setTargetShiftId] = useState<string | null>(null);
 
+  const fetchUserPlan = async (userId: string) => {
+    const details = await getBusinessDetails(userId);
+    if (details && details.tarif_plan) {
+      setTarifPlan(details.tarif_plan);
+    }
+  };
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      if (session?.user) {
+        fetchUserPlan(session.user.id);
+      }
       setLoading(false);
     }).catch(err => {
       console.error("Auth session error:", err);
@@ -35,6 +46,9 @@ const App: React.FC = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session?.user) {
+        fetchUserPlan(session.user.id);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -83,6 +97,8 @@ const App: React.FC = () => {
       case 'xisobotlar':
         return <Reports onContinueShift={handleContinueShift} />;
       case 'bron':
+        // Double check protection, though layout should hide link
+        if (tarifPlan === 'LITE') return <div className="p-10 text-center text-slate-500">Ushbu funksiya sizning tarifingizda mavjud emas.</div>;
         return <Booking />;
       case 'notebook':
         return <Notebook />;
@@ -99,6 +115,7 @@ const App: React.FC = () => {
       setActiveTab={handleTabChange}
       searchQuery={globalSearchQuery}
       setSearchQuery={setGlobalSearchQuery}
+      tarifPlan={tarifPlan}
     >
       {renderContent()}
     </Layout>

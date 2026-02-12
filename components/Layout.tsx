@@ -8,9 +8,10 @@ interface LayoutProps {
   setActiveTab: (tab: string) => void;
   searchQuery?: string;
   setSearchQuery?: (query: string) => void;
+  tarifPlan?: string;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, searchQuery = '', setSearchQuery }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, searchQuery = '', setSearchQuery, tarifPlan = 'LITE' }) => {
   // Sidebar holatini eslab qolish
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     return localStorage.getItem('xpro_sidebar_collapsed') === 'true';
@@ -46,7 +47,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, sear
   const menuItems = [
     { id: 'xpro', label: 'XPro', icon: Home },
     { id: 'xisobotlar', label: 'Hisobotlar', icon: BarChart2 },
-    { id: 'bron', label: 'Bron', icon: CalendarRange },
+    // Show 'bron' only if plan is NOT 'LITE'
+    ...(tarifPlan !== 'LITE' ? [{ id: 'bron', label: 'Bron', icon: CalendarRange }] : []),
     { id: 'notebook', label: 'Daftar', icon: Book },
     { id: 'sozlama', label: 'Sozlamalar', icon: Settings },
   ];
@@ -140,7 +142,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, sear
                {!isSidebarCollapsed && (
                  <div className="overflow-hidden animate-in fade-in duration-500">
                     <p className="text-xs font-black text-slate-800 dark:text-white truncate">Admin</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">Kassir</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">{tarifPlan} Plan</p>
                  </div>
                )}
             </div>

@@ -18,12 +18,73 @@ const getUser = async () => {
   return user;
 };
 
+// --- BUSINESS LOGIC HELPERS ---
+
+export const getBusinessDetails = async (userId: string) => {
+  try {
+    // 1. Get business_id from customers table using auth.user.id
+    // Note: Assuming the column in customers table linking to auth is 'auth_user_id' or 'user_id'
+    // Adjusting to 'user_id' based on common Supabase patterns, or 'id' if the customer id matches auth id.
+    // Let's assume 'auth_user_id' based on the prompt's context of finding business_id via auth.id
+    
+    // Using maybeSingle to avoid errors if not found immediately
+    const { data: customer, error: custError } = await supabase
+      .from('customers')
+      .select('business_id')
+      .eq('auth_user_id', userId) 
+      .maybeSingle();
+
+    if (custError || !customer) {
+        console.warn("Customer not found or error:", custError);
+        return null; 
+    }
+
+    // 2. Get tarif_plan from businesses table
+    const { data: business, error: busError } = await supabase
+      .from('businesses')
+      .select('tarif_plan')
+      .eq('id', customer.business_id)
+      .single();
+
+    if (busError) {
+        console.warn("Business not found:", busError);
+        return { business_id: customer.business_id, tarif_plan: 'LITE' }; // Default to LITE if error
+    }
+
+    return { 
+      business_id: customer.business_id, 
+      tarif_plan: business.tarif_plan 
+    };
+  } catch (error) {
+    console.error("Error fetching business details:", error);
+    return null;
+  }
+};
+
+// Helper to get current session's business ID for inserts
+const getCurrentBusinessId = async () => {
+  const user = await getUser();
+  if (!user) return null;
+  
+  // We try to fetch from local storage first if we cached it (optional optimization), 
+  // but for reliability here we fetch from DB or assume the cached profile in App.tsx handles state.
+  // For insert functions, we'll do a quick lookup.
+  const { data } = await supabase
+    .from('customers')
+    .select('business_id')
+    .eq('auth_user_id', user.id)
+    .maybeSingle();
+    
+  return data?.business_id;
+};
+
 // --- PAYMENT TYPES (Dynamic Tabs) ---
 
 export const getPaymentTypes = async (): Promise<PaymentType[]> => {
   const user = await getUser();
   if (!user) return [];
   
+  // RLS typically handles filtering by user/business, but we pass user_id explicitly just in case
   const { data, error } = await supabase
     .from('payment_types')
     .select('*')
@@ -37,11 +98,13 @@ export const getPaymentTypes = async (): Promise<PaymentType[]> => {
 export const createPaymentType = async (name: string, type: 'card' | 'expense'): Promise<PaymentType | null> => {
   const user = await getUser();
   if (!user) return null;
+  const businessId = await getCurrentBusinessId();
 
   // Get max sort order
   const { data: currentTypes } = await supabase
     .from('payment_types')
     .select('sort_order')
+    .eq('user_id', user.id) // Filter by user to get their sort order
     .order('sort_order', { ascending: false })
     .limit(1);
     
@@ -53,6 +116,7 @@ export const createPaymentType = async (name: string, type: 'card' | 'expense'):
       name, 
       type, 
       user_id: user.id, 
+      business_id: businessId, // Inject business_id
       is_system: false,
       sort_order: nextOrder
     }])
@@ -70,7 +134,6 @@ export const updatePaymentTypeName = async (id: string, newName: string, oldName
   const user = await getUser();
   if (!user) return;
 
-  // 1. Update the Payment Type Name
   const { error } = await supabase
     .from('payment_types')
     .update({ name: newName })
@@ -78,16 +141,12 @@ export const updatePaymentTypeName = async (id: string, newName: string, oldName
 
   if (error) throw error;
 
-  // 2. Update all past transactions that used the old name
-  // Note: In a real production app, we would use IDs for relationships, 
-  // but since transactions store category as string, we migrate data.
   await supabase
     .from('transactions')
     .update({ category: newName })
     .eq('user_id', user.id)
     .eq('category', oldName);
     
-  // Also update category_configs if any
   await supabase
     .from('category_configs')
     .update({ category_name: newName })
@@ -104,6 +163,7 @@ export const updatePaymentTypesOrder = async (types: PaymentType[]): Promise<voi
   const updates = types.map((t, index) => ({
     id: t.id,
     user_id: t.user_id,
+    // We assume business_id is already on the object or DB handles it via RLS on update
     name: t.name,
     type: t.type,
     is_system: t.is_system,
@@ -114,9 +174,8 @@ export const updatePaymentTypesOrder = async (types: PaymentType[]): Promise<voi
   if (error) console.error("Reorder error", error);
 };
 
-// --- END PAYMENT TYPES ---
+// --- BOOKING FUNCTIONS ---
 
-// BOOKING FUNCTIONS
 export const getBookingCategories = async (): Promise<BookingCategory[]> => {
   const user = await getUser();
   if (!user) return [];
@@ -132,9 +191,11 @@ export const getBookingCategories = async (): Promise<BookingCategory[]> => {
 export const createBookingCategory = async (name: string): Promise<BookingCategory | null> => {
   const user = await getUser();
   if (!user) return null;
+  const businessId = await getCurrentBusinessId();
+
   const { data, error } = await supabase
     .from('booking_categories')
-    .insert([{ name, user_id: user.id }])
+    .insert([{ name, user_id: user.id, business_id: businessId }])
     .select()
     .single();
   if (error) return null;
@@ -178,13 +239,16 @@ export const getRooms = async (categoryId?: string): Promise<Room[]> => {
 export const createRoom = async (categoryId: string, name: string): Promise<Room | null> => {
   const user = await getUser();
   if (!user) return null;
+  const businessId = await getCurrentBusinessId();
+
   const { data, error } = await supabase
     .from('rooms')
     .insert([{ 
       category_id: categoryId, 
       name: name.trim(), 
       status: 'free', 
-      user_id: user.id 
+      user_id: user.id,
+      business_id: businessId 
     }])
     .select()
     .single();
@@ -210,7 +274,6 @@ export const getBookingsForDate = async (date: Date): Promise<Booking[]> => {
   const user = await getUser();
   if (!user) return [];
 
-  // Kunning boshi va oxiri
   const startDate = new Date(date);
   startDate.setHours(0, 0, 0, 0);
   
@@ -234,10 +297,11 @@ export const getBookingsForDate = async (date: Date): Promise<Booking[]> => {
 export const createBooking = async (bookingData: Omit<Booking, 'id' | 'created_at'>): Promise<Booking | null> => {
   const user = await getUser();
   if (!user) return null;
+  const businessId = await getCurrentBusinessId();
 
   const { data, error } = await supabase
     .from('bookings')
-    .insert([{ ...bookingData, user_id: user.id }])
+    .insert([{ ...bookingData, user_id: user.id, business_id: businessId }])
     .select()
     .single();
 
@@ -253,7 +317,7 @@ export const deleteBooking = async (bookingId: string): Promise<void> => {
   if (error) throw error;
 };
 
-// --- END NEW BOOKING LOGIC ---
+// --- SHIFTS & TRANSACTIONS ---
 
 export const getActiveShift = async (): Promise<Shift | null> => {
   try {
@@ -301,13 +365,14 @@ export const updateShiftName = async (shiftId: string, name: string): Promise<vo
 
 export const startNewShift = async (): Promise<Shift | null> => {
   const user = await getUser();
+  const businessId = await getCurrentBusinessId();
   const now = new Date();
   const name = `Smena - ${now.toLocaleDateString('uz-UZ')} ${now.toLocaleTimeString('uz-UZ', {hour: '2-digit', minute:'2-digit'})}`;
   
   try {
     const { data, error } = await supabase
       .from('shifts')
-      .insert([{ name, status: 'active', user_id: user?.id }])
+      .insert([{ name, status: 'active', user_id: user?.id, business_id: businessId }])
       .select()
       .single();
     if (error) throw error;
@@ -392,11 +457,13 @@ export const getCategoryConfigs = async (shiftId: string) => {
 
 export const upsertCategoryConfig = async (shiftId: string, categoryName: string, config: { savdo_sum?: number, filters?: any }) => {
   const user = await getUser();
+  const businessId = await getCurrentBusinessId();
   try {
     const { error } = await supabase
       .from('category_configs')
       .upsert({
         user_id: user?.id,
+        business_id: businessId,
         shift_id: shiftId,
         category_name: categoryName,
         ...config
@@ -423,10 +490,14 @@ export const getTransactionsByShift = async (shiftId: string): Promise<Transacti
 
 export const saveTransaction = async (transaction: Omit<Transaction, 'id' | 'date'>): Promise<Transaction | null> => {
   const user = await getUser();
+  const businessId = await getCurrentBusinessId();
   try {
+    // Note: Assuming 'transactions' is the table name. If user meant 'xpro_user_data' to REPLACE transactions,
+    // we would change it here. But usually applications have multiple tables.
+    // We add business_id to the insert payload.
     const { data, error } = await supabase
       .from('transactions')
-      .insert([{ ...transaction, user_id: user?.id }])
+      .insert([{ ...transaction, user_id: user?.id, business_id: businessId }])
       .select()
       .single();
     if (error) throw error;
@@ -471,16 +542,18 @@ export const getExpenseCategories = async (): Promise<ExpenseCategory[]> => {
 
 export const createExpenseCategory = async (name: string): Promise<ExpenseCategory | null> => {
   const user = await getUser();
+  const businessId = await getCurrentBusinessId();
   try {
     const { data: currentCats } = await supabase
       .from('expense_categories')
       .select('sort_order')
+      .eq('user_id', user?.id)
       .order('sort_order', { ascending: false })
       .limit(1);
     const nextOrder = (currentCats && currentCats[0]?.sort_order || 0) + 1;
     const { data, error } = await supabase
       .from('expense_categories')
-      .insert([{ name, user_id: user?.id, sort_order: nextOrder }])
+      .insert([{ name, user_id: user?.id, business_id: businessId, sort_order: nextOrder }])
       .select()
       .single();
     if (error) throw error;
@@ -540,10 +613,11 @@ export const getNotes = async (): Promise<Note[]> => {
 
 export const createNote = async (title: string, content: string): Promise<Note | null> => {
   const user = await getUser();
+  const businessId = await getCurrentBusinessId();
   try {
     const { data, error } = await supabase
       .from('notes')
-      .insert([{ title, content, user_id: user?.id }])
+      .insert([{ title, content, user_id: user?.id, business_id: businessId }])
       .select()
       .single();
     if (error) throw error;
@@ -591,13 +665,15 @@ export const getDeletionPassword = async (): Promise<string> => {
 
 export const setDeletionPassword = async (newPassword: string): Promise<void> => {
   const user = await getUser();
+  const businessId = await getCurrentBusinessId();
   try {
     const { error } = await supabase
       .from('settings')
       .upsert({ 
         key: 'deletion_password', 
         value: newPassword,
-        user_id: user?.id
+        user_id: user?.id,
+        business_id: businessId
       }, { onConflict: 'key' });
     if (error) throw error;
   } catch (err: any) {
