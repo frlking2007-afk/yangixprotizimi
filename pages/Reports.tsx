@@ -12,7 +12,7 @@ import * as htmlToImage from 'html-to-image';
 import { Shift, Transaction, ExpenseCategory, PaymentType } from '../types.ts';
 import { 
   getAllShifts, getTransactionsByShift, deleteShift, 
-  getDeletionPassword, getExpenseCategories, getCategoryConfigs,
+  getDeletionPassword, getDeletionPasswordState, getExpenseCategories, getCategoryConfigs,
   reopenShift, getPaymentTypes
 } from '../services/supabase.ts';
 
@@ -241,14 +241,30 @@ const Reports: React.FC<ReportsProps> = ({ onContinueShift }) => {
 
   const handleDeleteShift = async (e: React.MouseEvent, shiftId: string) => {
     e.stopPropagation();
+    
+    // Check if password enabled
+    const isEnabled = await getDeletionPasswordState();
+
+    const performDelete = async () => {
+        await deleteShift(shiftId);
+        await fetchShifts();
+        setSelectedShiftId(null);
+    };
+
+    if (!isEnabled) {
+        if (confirm("Ushbu smena butunlay o'chirilsinmi?")) {
+            await performDelete();
+        }
+        return;
+    }
+
     const password = prompt("Smenani o'chirish paroli:");
     if (password === null) return;
     const correctPassword = await getDeletionPassword();
     if (password !== correctPassword) return alert("Parol noto'g'ri!");
+    
     if (confirm("Ushbu smena butunlay o'chirilsinmi?")) {
-      await deleteShift(shiftId);
-      await fetchShifts();
-      setSelectedShiftId(null);
+      await performDelete();
     }
   };
 

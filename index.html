@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="uz">
 <head>
@@ -10,11 +11,7 @@
       tailwind.config = {
         darkMode: 'class',
         theme: {
-          extend: {
-            screens: {
-              'hacker': {'raw': '.hacker &'},
-            }
-          }
+          extend: {}
         }
       }
     </script>
@@ -24,42 +21,6 @@
         /* Dark Theme Support */
         .dark body { background-color: #09090b; color: #fafafa; }
         
-        /* Hacker Theme Support */
-        .hacker {
-          --bg-color: #000000;
-          --primary-color: #00ff00;
-          --secondary-color: #003300;
-        }
-        .hacker body { 
-          background-color: var(--bg-color); 
-          color: var(--primary-color);
-          font-family: 'Courier New', Courier, monospace;
-        }
-        
-        /* Specific element overrides for Hacker Theme */
-        .hacker #root { background-color: #000; }
-        .hacker .bg-white { background-color: #000 !important; border-color: #00ff00 !important; }
-        .hacker .text-slate-800, .hacker .text-slate-900, .hacker .text-slate-700 { color: #00ff00 !important; }
-        .hacker .text-slate-500, .hacker .text-slate-400 { color: #00ff00aa !important; }
-        .hacker .border-slate-100, .hacker .border-slate-200, .hacker .border-slate-50 { border-color: #00ff0033 !important; }
-        .hacker .bg-slate-50, .hacker .bg-slate-100 { background-color: #001100 !important; }
-        .hacker button, .hacker .rounded-xl, .hacker .rounded-2xl, .hacker .rounded-3xl, .hacker .rounded-full { 
-          border-radius: 2px !important; 
-          border: 1px solid #00ff00 !important; 
-        }
-        .hacker .shadow-sm, .hacker .shadow-md, .hacker .shadow-lg, .hacker .shadow-xl { 
-          box-shadow: 0 0 10px #00ff0033 !important; 
-        }
-        .hacker input, .hacker textarea {
-          background-color: #000 !important;
-          color: #00ff00 !important;
-          border: 1px solid #00ff00 !important;
-          border-radius: 0 !important;
-        }
-        .hacker .bg-indigo-600 { background-color: #00ff00 !important; color: #000 !important; }
-        .hacker .text-indigo-600 { color: #00ff00 !important; }
-        .hacker .text-indigo-700 { color: #00ff00 !important; }
-
         /* Print styles */
         @media print {
           .no-print { display: none !important; }
@@ -73,7 +34,13 @@
       // Apply theme on load
       (function() {
         const theme = localStorage.getItem('theme') || 'light';
-        document.documentElement.className = theme;
+        // Fallback if previous theme was hacker
+        if (theme === 'hacker') {
+            localStorage.setItem('theme', 'light');
+            document.documentElement.className = 'light';
+        } else {
+            document.documentElement.className = theme;
+        }
       })();
       
       // Safely define process for browser compatibility without overwriting existing env

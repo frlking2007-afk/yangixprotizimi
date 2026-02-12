@@ -682,6 +682,8 @@ export const deleteNote = async (id: string): Promise<void> => {
   }
 };
 
+// --- SETTINGS (PASSWORD & PROTECTION) ---
+
 export const getDeletionPassword = async (): Promise<string> => {
   try {
     const { data, error } = await supabase
@@ -694,6 +696,21 @@ export const getDeletionPassword = async (): Promise<string> => {
     return data?.value || '1234';
   } catch (err) {
     return '1234';
+  }
+};
+
+export const getDeletionPasswordState = async (): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'deletion_password_enabled')
+      .maybeSingle();
+    
+    if (error || !data) return true; // Default to true if not found/error
+    return data.value === 'true';
+  } catch (err) {
+    return true; // Default safe
   }
 };
 
@@ -712,5 +729,23 @@ export const setDeletionPassword = async (newPassword: string): Promise<void> =>
     if (error) throw error;
   } catch (err: any) {
     throw new Error(err.message || "Parolni saqlashda xatolik");
+  }
+};
+
+export const setDeletionPasswordState = async (enabled: boolean): Promise<void> => {
+  const user = await getUser();
+  const businessId = await getCurrentBusinessId();
+  try {
+    const { error } = await supabase
+      .from('settings')
+      .upsert({ 
+        key: 'deletion_password_enabled', 
+        value: enabled ? 'true' : 'false',
+        user_id: user?.id,
+        business_id: businessId
+      }, { onConflict: 'key' });
+    if (error) throw error;
+  } catch (err: any) {
+    throw new Error(err.message || "Xatolik yuz berdi");
   }
 };

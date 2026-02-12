@@ -16,7 +16,7 @@ import { Transaction, Shift, ExpenseCategory, PaymentType } from '../types.ts';
 import { 
   getActiveShift, startNewShift, closeShift, 
   getTransactionsByShift, deleteTransaction,
-  getExpenseCategories, updateTransaction, getDeletionPassword,
+  getExpenseCategories, updateTransaction, getDeletionPassword, getDeletionPasswordState,
   createExpenseCategory, updateExpenseCategory, deleteExpenseCategory,
   saveTransaction, updateShiftManualSum, getCategoryConfigs, upsertCategoryConfig,
   updateExpenseCategoriesOrder, getShiftById, getActiveShiftsOnly, updateShiftName, deleteShift,
@@ -34,11 +34,11 @@ const StatCard = ({ label, val, icon, color, onClick }: { label: string, val: nu
   return (
     <div 
       onClick={onClick}
-      className={`bg-white dark:bg-zinc-900 hacker:bg-black p-6 rounded-[2rem] border border-slate-100 dark:border-zinc-800 shadow-sm flex items-center justify-between transition-all ${onClick ? 'cursor-pointer hover:border-slate-400 dark:hover:border-zinc-500 active:scale-95' : ''}`}
+      className={`bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-slate-100 dark:border-zinc-800 shadow-sm flex items-center justify-between transition-all ${onClick ? 'cursor-pointer hover:border-slate-400 dark:hover:border-zinc-500 active:scale-95' : ''}`}
     >
       <div>
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-        <h3 className={`text-2xl font-black ${color === 'red' ? 'text-red-500' : color === 'green' ? 'text-green-600' : 'text-slate-900 dark:text-white hacker:text-[#0f0]'}`}>
+        <h3 className={`text-2xl font-black ${color === 'red' ? 'text-red-500' : color === 'green' ? 'text-green-600' : 'text-slate-900 dark:text-white'}`}>
           {(val || 0).toLocaleString()} <span className="text-[10px] text-slate-400">so'm</span>
         </h3>
       </div>
@@ -182,7 +182,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
     setModal({ ...config, isOpen: true });
   };
 
-  const initData = async () => {
+  const initData = async (isMounted: boolean) => {
     setLoading(true);
     try {
       // Parallelize fetches as much as possible
@@ -192,6 +192,8 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
         getActiveShiftsOnly() // Optimization: Fetch only active shifts
       ]);
 
+      if (!isMounted) return;
+
       setExpenseCategories(categories || []);
       setPaymentTypes(pTypes || []);
       setActiveShiftsList(allActiveShifts || []);
@@ -200,6 +202,8 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
       if (forcedShiftId) {
         shift = await getShiftById(forcedShiftId);
       }
+      
+      if (!isMounted) return;
       setActiveShift(shift);
 
       if (shift) {
@@ -210,6 +214,8 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
             getCategoryConfigs(shift.id)
         ]);
         
+        if (!isMounted) return;
+
         setTransactions(trans || []);
         
         const sums: Record<string, number> = {};
@@ -225,10 +231,18 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
         const expenseTab = pTypes.find(pt => pt.type === 'expense');
         if (activeTab === (expenseTab?.name || 'Xarajat') && !activeSubTab && categories?.length > 0) setActiveSubTab(categories[0].name);
       }
-    } catch (err) { console.error(err); } finally { setLoading(false); }
+    } catch (err) { 
+        console.error(err); 
+    } finally { 
+        if (isMounted) setLoading(false); 
+    }
   };
 
-  useEffect(() => { initData(); }, [forcedShiftId]);
+  useEffect(() => { 
+      let mounted = true;
+      initData(mounted); 
+      return () => { mounted = false; }
+  }, [forcedShiftId]);
 
   const handleSelectActiveShift = async (shift: Shift) => {
     setLoading(true);
@@ -268,8 +282,26 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
     });
   };
 
-  const handleDeleteActiveShift = () => {
+  const handleDeleteActiveShift = async () => {
     if (!activeShift) return;
+    
+    // Check if password enabled
+    const isEnabled = await getDeletionPasswordState();
+    
+    const performDelete = async () => {
+        await deleteShift(activeShift.id);
+        setActiveShift(null);
+        // re-init data
+        initData(true);
+    };
+
+    if (!isEnabled) {
+        if(confirm("Smenani o'chirishni tasdiqlaysizmi? Barcha ma'lumotlar o'chadi.")) {
+            await performDelete();
+        }
+        return;
+    }
+
     openModal({
         title: "Smenani o'chirish",
         description: "Diqqat! Ushbu smena va unga tegishli barcha ma'lumotlar o'chib ketadi.",
@@ -278,9 +310,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
         onConfirm: async (password) => {
             const correctPassword = await getDeletionPassword();
             if (password !== correctPassword) return alert("Parol noto'g'ri!");
-            await deleteShift(activeShift.id);
-            setActiveShift(null);
-            initData(); // Refresh to show welcome screen or other shifts
+            await performDelete();
         }
     });
   };
@@ -294,7 +324,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
       onConfirm: async () => {
          await closeShift(activeShift.id);
          setActiveShift(null);
-         initData();
+         initData(true);
       }
     });
   }
@@ -522,17 +552,27 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
   };
 
   // ... (Edit/Add/Delete Transaction logic same as before)
-  const handleEditTransactionClick = (t: Transaction) => {
+  const handleEditTransactionClick = async (t: Transaction) => {
+    const isEnabled = await getDeletionPasswordState();
+    const openEditModal = () => {
+        setEditingTransaction(t);
+        setEditAmountVal(t.amount.toString());
+        setEditDescVal(t.description || '');
+        setEditTransModalOpen(true);
+    };
+
+    if (!isEnabled) {
+        openEditModal();
+        return;
+    }
+
     openModal({
       title: "Tahrirlash paroli",
       type: 'password',
       onConfirm: async (password) => {
         const correctPassword = await getDeletionPassword();
         if (password !== correctPassword) return alert("Parol noto'g'ri!");
-        setEditingTransaction(t);
-        setEditAmountVal(t.amount.toString());
-        setEditDescVal(t.description || '');
-        setEditTransModalOpen(true);
+        openEditModal();
       }
     });
   };
@@ -553,15 +593,25 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
     await updateTransaction(editingTransaction.id, { amount: num, description: editDescVal });
   };
 
-  const handleAddAmountClick = (t: Transaction) => {
+  const handleAddAmountClick = async (t: Transaction) => {
+    const isEnabled = await getDeletionPasswordState();
+    const openAddModal = () => {
+        setTargetAddTransaction(t);
+        setAddAmountModalOpen(true);
+    };
+
+    if (!isEnabled) {
+        openAddModal();
+        return;
+    }
+
     openModal({
       title: "Qo'shish paroli",
       type: 'password',
       onConfirm: async (password) => {
         const correctPassword = await getDeletionPassword();
         if (password !== correctPassword) return alert("Parol noto'g'ri!");
-        setTargetAddTransaction(t);
-        setAddAmountModalOpen(true);
+        openAddModal();
       }
     });
   };
@@ -582,6 +632,21 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
   };
 
   const handleDeleteTransaction = async (id: string) => {
+    const isEnabled = await getDeletionPasswordState();
+    
+    const performDelete = async () => {
+         // OPTIMISTIC UPDATE
+        setTransactions(prev => prev.filter(t => t.id !== id));
+        await deleteTransaction(id);
+    };
+
+    if (!isEnabled) {
+        if(confirm("Ushbu operatsiyani o'chirmoqchimisiz?")) {
+            await performDelete();
+        }
+        return;
+    }
+
     openModal({
       title: "O'chirish paroli",
       type: 'password',
@@ -589,11 +654,7 @@ const XPro: React.FC<{ forcedShiftId?: string | null, searchQuery?: string, onSe
       onConfirm: async (password) => {
         const correctPassword = await getDeletionPassword();
         if (password !== correctPassword) return alert("Parol noto'g'ri!");
-        
-        // OPTIMISTIC UPDATE
-        setTransactions(prev => prev.filter(t => t.id !== id));
-        
-        await deleteTransaction(id);
+        await performDelete();
       }
     });
   };

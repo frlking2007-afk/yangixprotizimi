@@ -33,7 +33,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, sear
   useEffect(() => {
     const updateLogo = () => {
       const theme = localStorage.getItem('theme') || 'light';
-      if (theme === 'dark' || theme === 'hacker') {
+      if (theme === 'dark') {
         setLogoSrc(darkLogo);
       } else {
         setLogoSrc(lightLogo);
@@ -63,11 +63,11 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, sear
   };
 
   return (
-    <div className="min-h-screen flex bg-slate-50 dark:bg-zinc-950 hacker:bg-black transition-all duration-300">
+    <div className="min-h-screen flex bg-slate-50 dark:bg-zinc-950 transition-all duration-300">
       
       {/* Fixed/Sticky Sidebar */}
       <aside className={`
-        sticky top-0 h-screen bg-white dark:bg-zinc-900 hacker:bg-black border-r border-slate-200 dark:border-zinc-800 hacker:border-[#0f0] transition-all duration-500 ease-in-out z-40 shrink-0
+        sticky top-0 h-screen bg-white dark:bg-zinc-900 border-r border-slate-200 dark:border-zinc-800 transition-all duration-500 ease-in-out z-40 shrink-0
         ${isSidebarCollapsed ? 'w-20' : 'w-72'}
       `}>
         <div className="h-full flex flex-col">
@@ -82,7 +82,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, sear
                   <div className="w-10 h-10 bg-slate-900 dark:bg-white flex items-center justify-center text-white dark:text-black rounded-xl shadow-lg"><Wallet size={20} /></div>
                 )}
                 <div className="flex flex-col">
-                  <span className="font-black text-xl tracking-tighter dark:text-white hacker:text-[#0f0] uppercase leading-none">Xpro</span>
+                  <span className="font-black text-xl tracking-tighter dark:text-white uppercase leading-none">Xpro</span>
                   <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Kassa Tizimi</span>
                 </div>
               </div>
@@ -128,7 +128,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, sear
                   w-full flex items-center transition-all duration-300 group rounded-2xl
                   ${isSidebarCollapsed ? 'justify-center p-3' : 'px-5 py-4 gap-4'}
                   ${activeTab === item.id 
-                    ? 'bg-slate-900 text-white shadow-xl shadow-slate-200 dark:bg-white dark:text-black dark:shadow-none hacker:bg-[#002200] hacker:text-[#0f0]' 
+                    ? 'bg-slate-900 text-white shadow-xl shadow-slate-200 dark:bg-white dark:text-black dark:shadow-none' 
                     : 'text-slate-400 dark:text-zinc-500 hover:bg-slate-50 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white'}
                 `}
               >
@@ -157,7 +157,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, sear
       </aside>
 
       <main className="flex-1 flex flex-col min-w-0 transition-all duration-500 overflow-x-hidden">
-        <header className="sticky top-0 z-30 h-16 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl border-b border-slate-200 dark:border-zinc-800 hacker:border-[#0f0] flex items-center justify-between px-6 md:px-10 shadow-sm">
+        <header className="sticky top-0 z-30 h-16 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between px-6 md:px-10 shadow-sm">
           
           <div className="w-10"></div>
 
@@ -177,7 +177,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, sear
           </div>
 
           <div className="min-w-[120px] text-right">
-            <h2 className="text-sm md:text-base font-black text-slate-900 dark:text-white hacker:text-[#0f0] uppercase tracking-tighter hacker:font-mono">
+            <h2 className="text-sm md:text-base font-black text-slate-900 dark:text-white uppercase tracking-tighter">
               {activeTab === 'xpro' ? 'Dashboard' : 
                activeTab === 'sozlama' ? 'Sozlamalar' : 
                activeTab === 'notebook' ? 'Daftar' : 

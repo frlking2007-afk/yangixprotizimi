@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  User, Edit3, Save, X, LogOut, Sun, Moon, Terminal, Palette, Lock, ShieldCheck, RefreshCcw
+  User, Edit3, Save, X, LogOut, Sun, Moon, Palette, Lock, ShieldCheck, RefreshCcw, Eye, EyeOff
 } from 'lucide-react';
 import { getCurrentUser, updateUsername, logout } from '../services/auth';
-import { setDeletionPassword } from '../services/supabase';
+import { setDeletionPassword, getDeletionPassword, getDeletionPasswordState, setDeletionPasswordState } from '../services/supabase';
 
 const Settings: React.FC = () => {
   const [user, setUser] = useState<any>(null);
@@ -12,17 +12,31 @@ const Settings: React.FC = () => {
   const [newName, setNewName] = useState('');
   const [currentTheme, setCurrentTheme] = useState(localStorage.getItem('theme') || 'light');
 
-  // Password setting state
+  // Password state
+  const [savedPassword, setSavedPassword] = useState('');
+  const [showSavedPassword, setShowSavedPassword] = useState(false);
+  const [isPasswordEnabled, setIsPasswordEnabled] = useState(true);
+  
+  // Password setting form
   const [passForm, setPassForm] = useState({ current: '', confirm: '' });
   const [isUpdatingPass, setIsUpdatingPass] = useState(false);
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const initData = async () => {
+      // Fetch user
       const u = await getCurrentUser();
       setUser(u);
       setNewName(u?.user_metadata?.full_name || 'Admin Foydalanuvchi');
+
+      // Fetch current password and state
+      const [pass, enabled] = await Promise.all([
+        getDeletionPassword(),
+        getDeletionPasswordState()
+      ]);
+      setSavedPassword(pass);
+      setIsPasswordEnabled(enabled);
     };
-    fetchUser();
+    initData();
   }, []);
 
   const changeTheme = (theme: string) => {
@@ -39,142 +53,211 @@ const Settings: React.FC = () => {
       const u = await getCurrentUser();
       setUser(u);
     } catch (err) {
-      alert("Xatolik yuz berdi");
+      alert("Ismni yangilashda xatolik");
     }
   };
 
-  const handleUpdatePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!passForm.current || passForm.current !== passForm.confirm) {
-      alert("Parollar mos kelmadi!");
-      return;
+  const handleTogglePassword = async () => {
+    const newState = !isPasswordEnabled;
+    setIsPasswordEnabled(newState);
+    try {
+      await setDeletionPasswordState(newState);
+    } catch (e) {
+      // Revert if error
+      setIsPasswordEnabled(!newState);
+      alert("Holatni o'zgartirishda xatolik");
     }
-    
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!passForm.current || !passForm.confirm) {
+        alert("Iltimos, parolni kiriting");
+        return;
+    }
+    if (passForm.current !== passForm.confirm) {
+        alert("Parollar mos kelmadi");
+        return;
+    }
+
     setIsUpdatingPass(true);
     try {
-      await setDeletionPassword(passForm.current);
-      setPassForm({ current: '', confirm: '' });
-      alert("Operatsiyalarni o'chirish paroli yangilandi!");
-    } catch (err: any) {
-      alert("Xato: " + err.message);
+        await setDeletionPassword(passForm.current);
+        setSavedPassword(passForm.current);
+        setPassForm({ current: '', confirm: '' });
+        alert("Parol muvaffaqiyatli yangilandi");
+    } catch (e) {
+        alert("Xatolik yuz berdi");
     } finally {
-      setIsUpdatingPass(false);
+        setIsUpdatingPass(false);
     }
   };
 
-  const themes = [
-    { id: 'light', name: 'Oq', icon: Sun, color: 'bg-white', textColor: 'text-slate-900' },
-    { id: 'dark', name: 'Qora', icon: Moon, color: 'bg-zinc-900', textColor: 'text-white' },
-    { id: 'hacker', name: 'Hacker', icon: Terminal, color: 'bg-black', textColor: 'text-[#0f0]' }
-  ];
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      localStorage.clear();
+      window.location.href = '/';
+    }
+  };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      {/* Profile Header */}
-      <div className="bg-white dark:bg-zinc-800 hacker:bg-black hacker:border hacker:border-[#0f0] rounded-[2.5rem] p-6 md:p-8 border border-slate-100 dark:border-zinc-700 shadow-sm flex flex-col md:flex-row items-center gap-6 md:gap-8">
-        <div className="w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-slate-100 dark:bg-zinc-700 hacker:bg-[#001100] hacker:border hacker:border-[#0f0] flex items-center justify-center text-slate-900 dark:text-white hacker:text-[#0f0] relative shrink-0">
-          <User size={40} />
-          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-4 border-white dark:border-zinc-800 hacker:border-black rounded-full"></div>
+    <div className="max-w-4xl mx-auto pb-20 space-y-8 animate-in fade-in duration-500">
+      
+      {/* Profile Card */}
+      <div className="bg-white dark:bg-zinc-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-zinc-800 flex flex-col items-center text-center">
+        <div className="w-24 h-24 bg-slate-100 dark:bg-zinc-800 rounded-3xl flex items-center justify-center text-slate-400 mb-6 relative group">
+           <User size={40} />
+           <div className="absolute bottom-0 right-0 w-6 h-6 bg-green-500 rounded-full border-4 border-white dark:border-zinc-900"></div>
         </div>
         
-        <div className="flex-1 text-center md:text-left">
-          {isEditing ? (
-            <div className="flex flex-col md:flex-row items-center gap-3">
-              <input 
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                className="px-4 py-2 bg-slate-50 dark:bg-zinc-900 hacker:bg-black hacker:border hacker:border-[#0f0] border border-slate-100 dark:border-zinc-700 rounded-xl outline-none font-bold text-xl dark:text-white"
-                autoFocus
-              />
-              <div className="flex gap-2">
-                <button onClick={handleUpdateName} className="p-2 bg-green-50 text-green-600 rounded-xl hover:bg-green-100"><Save size={20} /></button>
-                <button onClick={() => setIsEditing(false)} className="p-2 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-100"><X size={20} /></button>
-              </div>
+        {isEditing ? (
+            <div className="flex items-center gap-2 mb-6">
+                <input 
+                  type="text" 
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  className="bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl px-4 py-2 font-bold text-center outline-none dark:text-white"
+                />
+                <button onClick={handleUpdateName} className="p-2 bg-green-500 text-white rounded-xl"><Save size={18} /></button>
+                <button onClick={() => setIsEditing(false)} className="p-2 bg-red-500 text-white rounded-xl"><X size={18} /></button>
             </div>
-          ) : (
-            <div className="flex flex-col md:flex-row items-center gap-4">
-              <h2 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-white hacker:text-[#0f0] hacker:font-mono">{user?.user_metadata?.full_name || 'Admin Foydalanuvchi'}</h2>
-              <button onClick={() => setIsEditing(true)} className="p-2.5 bg-slate-50 dark:bg-zinc-700 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl border border-transparent hover:border-slate-100"><Edit3 size={18} /></button>
-            </div>
-          )}
-          <p className="text-slate-400 hacker:text-[#0f0]/60 mt-1 font-medium hacker:font-mono">{user?.email}</p>
-        </div>
+        ) : (
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2 flex items-center gap-2 justify-center">
+                {user?.user_metadata?.full_name || 'Admin Foydalanuvchi'}
+                <button onClick={() => setIsEditing(true)} className="p-1.5 text-slate-300 hover:text-slate-600 dark:hover:text-white transition-colors"><Edit3 size={16} /></button>
+            </h2>
+        )}
+        
+        <p className="text-slate-400 font-medium text-sm mb-8">{user?.email}</p>
 
         <button 
-          onClick={() => logout().then(() => window.location.reload())}
-          className="px-6 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-bold rounded-2xl hover:bg-red-100 transition-all flex items-center gap-2 border border-red-100 hacker:border-[#f00]"
+          onClick={handleLogout}
+          className="px-8 py-3 bg-red-50 dark:bg-red-900/10 text-red-600 font-black rounded-2xl flex items-center gap-2 hover:bg-red-100 dark:hover:bg-red-900/20 transition-all active:scale-95"
         >
           <LogOut size={18} /> Chiqish
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Password Management */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-black text-slate-800 dark:text-white hacker:text-[#0f0] flex items-center gap-2">
-            <Lock size={20} className="text-slate-900 dark:text-white hacker:text-[#0f0]" /> Operatsiyalarni o'chirish paroli
-          </h3>
-          <div className="bg-white dark:bg-zinc-800 hacker:bg-black hacker:border hacker:border-[#0f0] rounded-[2rem] p-6 border border-slate-100 dark:border-zinc-700 shadow-sm">
-            <form onSubmit={handleUpdatePassword} className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Yangi parol</label>
-                <input 
-                  type="password"
-                  placeholder="Parolni kiriting"
-                  value={passForm.current}
-                  onChange={(e) => setPassForm({...passForm, current: e.target.value})}
-                  className="w-full px-5 py-3.5 bg-slate-50 dark:bg-zinc-900 hacker:bg-black hacker:border hacker:border-[#0f0] border border-slate-100 dark:border-zinc-800 rounded-2xl outline-none font-medium text-sm dark:text-white hacker:text-[#0f0]"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Parolni tasdiqlash</label>
-                <input 
-                  type="password"
-                  placeholder="Parolni qayta kiriting"
-                  value={passForm.confirm}
-                  onChange={(e) => setPassForm({...passForm, confirm: e.target.value})}
-                  className="w-full px-5 py-3.5 bg-slate-50 dark:bg-zinc-900 hacker:bg-black hacker:border hacker:border-[#0f0] border border-slate-100 dark:border-zinc-800 rounded-2xl outline-none font-medium text-sm dark:text-white hacker:text-[#0f0]"
-                />
-              </div>
-              <button 
-                type="submit"
-                disabled={isUpdatingPass}
-                className="w-full py-3.5 bg-slate-900 dark:bg-white hacker:bg-[#0f0] text-white dark:text-black hacker:text-black font-black rounded-2xl flex items-center justify-center gap-2 hover:bg-black dark:hover:bg-slate-100 transition-all shadow-lg shadow-slate-200 dark:shadow-none"
-              >
-                {isUpdatingPass ? <RefreshCcw className="animate-spin" size={18} /> : <ShieldCheck size={18} />}
-                Saqlash
-              </button>
-            </form>
-          </div>
-        </div>
-
-        {/* Themes */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-black text-slate-800 dark:text-white hacker:text-[#0f0] flex items-center gap-2">
-            <Palette size={20} className="text-slate-900 dark:text-white hacker:text-[#0f0]" /> Mavzular (Theme)
-          </h3>
-          <div className="grid grid-cols-1 gap-3">
-            {themes.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => changeTheme(t.id)}
-                className={`
-                  p-4 rounded-2xl border transition-all flex items-center justify-between
-                  ${currentTheme === t.id ? 'border-slate-900 dark:border-white bg-slate-50 dark:bg-zinc-800' : 'border-slate-100 dark:border-zinc-800 hover:border-slate-300'}
-                  ${t.color}
-                `}
-              >
-                <div className="flex items-center gap-4">
-                  <div className={`p-2.5 rounded-xl ${currentTheme === t.id ? 'bg-slate-900 dark:bg-white text-white dark:text-black' : 'bg-slate-100 dark:bg-zinc-800 text-slate-500'}`}>
-                    <t.icon size={20} />
-                  </div>
-                  <span className={`font-black ${t.textColor} hacker:font-mono`}>{t.name}</span>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          
+          {/* Password Settings */}
+          <div className="bg-white dark:bg-zinc-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-zinc-800 h-full relative overflow-hidden">
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                            <Lock size={24} />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">O'chirish paroli</h3>
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Xavfsizlik</p>
+                        </div>
+                    </div>
+                    {/* Toggle Switch */}
+                    <div 
+                        onClick={handleTogglePassword}
+                        className={`w-14 h-8 rounded-full p-1 cursor-pointer transition-colors duration-300 ${isPasswordEnabled ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-zinc-700'}`}
+                    >
+                        <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${isPasswordEnabled ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                    </div>
                 </div>
-                {currentTheme === t.id && <div className="w-2 h-2 rounded-full bg-slate-900 dark:bg-white animate-pulse"></div>}
-              </button>
-            ))}
+
+                <div className={`transition-opacity duration-300 ${isPasswordEnabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                    {/* READ ONLY CURRENT PASSWORD */}
+                    <div className="mb-6 relative">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Amaldagi Parol</label>
+                        <div className="relative">
+                            <input 
+                                type={showSavedPassword ? "text" : "password"} 
+                                value={savedPassword} 
+                                readOnly 
+                                className="w-full pl-5 pr-12 py-4 bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800 rounded-2xl outline-none font-bold text-slate-600 dark:text-slate-400"
+                            />
+                            <button 
+                                onClick={() => setShowSavedPassword(!showSavedPassword)}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors pointer-events-auto"
+                            >
+                                {showSavedPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Yangi Parol</label>
+                            <input 
+                                type="text" 
+                                placeholder="Parolni kiriting"
+                                value={passForm.current}
+                                onChange={e => setPassForm({...passForm, current: e.target.value})}
+                                className="w-full px-5 py-4 bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800 rounded-2xl outline-none font-medium dark:text-white focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Tasdiqlash</label>
+                            <input 
+                                type="text" 
+                                placeholder="Qayta kiriting"
+                                value={passForm.confirm}
+                                onChange={e => setPassForm({...passForm, confirm: e.target.value})}
+                                className="w-full px-5 py-4 bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800 rounded-2xl outline-none font-medium dark:text-white focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                            />
+                        </div>
+                        <button 
+                            onClick={handleUpdatePassword}
+                            disabled={isUpdatingPass}
+                            className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-black font-black rounded-2xl flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-slate-200 dark:shadow-none disabled:opacity-50 mt-2 pointer-events-auto"
+                        >
+                            {isUpdatingPass ? <RefreshCcw className="animate-spin" size={20} /> : <ShieldCheck size={20} />} Saqlash
+                        </button>
+                    </div>
+                </div>
+                
+                {!isPasswordEnabled && (
+                    <div className="absolute inset-0 top-20 flex items-center justify-center pointer-events-none">
+                        <span className="bg-slate-100 dark:bg-zinc-800 px-4 py-2 rounded-xl text-xs font-bold text-slate-400 uppercase">Parol o'chirilgan</span>
+                    </div>
+                )}
           </div>
-        </div>
+
+          {/* Theme Settings */}
+          <div className="bg-white dark:bg-zinc-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-zinc-800 h-full">
+             <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 flex items-center justify-center">
+                    <Palette size={24} />
+                </div>
+                <div>
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Mavzular (Theme)</h3>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Ko'rinish</p>
+                </div>
+             </div>
+
+             <div className="space-y-3">
+                <button 
+                  onClick={() => changeTheme('light')}
+                  className={`w-full p-4 rounded-2xl flex items-center justify-between border-2 transition-all ${currentTheme === 'light' ? 'border-slate-900 bg-slate-50 dark:border-white dark:bg-zinc-800' : 'border-transparent hover:bg-slate-50 dark:hover:bg-zinc-800'}`}
+                >
+                   <div className="flex items-center gap-3">
+                      <Sun size={20} className={currentTheme === 'light' ? 'text-slate-900 dark:text-white' : 'text-slate-400'} />
+                      <span className="font-bold text-slate-700 dark:text-white">Oq</span>
+                   </div>
+                   {currentTheme === 'light' && <div className="w-3 h-3 rounded-full bg-slate-900 dark:bg-white"></div>}
+                </button>
+
+                <button 
+                  onClick={() => changeTheme('dark')}
+                  className={`w-full p-4 rounded-2xl flex items-center justify-between border-2 transition-all ${currentTheme === 'dark' ? 'border-slate-900 bg-slate-50 dark:border-white dark:bg-zinc-800' : 'border-transparent hover:bg-slate-50 dark:hover:bg-zinc-800'}`}
+                >
+                   <div className="flex items-center gap-3">
+                      <Moon size={20} className={currentTheme === 'dark' ? 'text-slate-900 dark:text-white' : 'text-slate-400'} />
+                      <span className="font-bold text-slate-700 dark:text-white">Qora</span>
+                   </div>
+                   {currentTheme === 'dark' && <div className="w-3 h-3 rounded-full bg-slate-900 dark:bg-white"></div>}
+                </button>
+             </div>
+          </div>
       </div>
     </div>
   );
