@@ -1,35 +1,11 @@
-
 <!DOCTYPE html>
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Xpro - Kassa Tizimi</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="./output.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {}
-        }
-      }
-    </script>
-    <style>
-        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s ease, color 0.3s ease; }
-        
-        /* Dark Theme Support */
-        .dark body { background-color: #09090b; color: #fafafa; }
-        
-        /* Print styles */
-        @media print {
-          .no-print { display: none !important; }
-          .print-only { display: block !important; }
-          body { background: white !important; color: black !important; }
-          .bg-white { border: 1px solid #eee !important; }
-        }
-        .print-only { display: none; }
-    </style>
     <script>
       // Apply theme on load
       (function() {
